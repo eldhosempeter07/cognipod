@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addStudyGroup } from "../util/firebaseServices";
+import { addStudyGroup } from "../util/firebase/firebaseServices";
 import { useNavigate, useParams } from "react-router-dom";
 import { serverTimestamp } from "firebase/firestore";
 

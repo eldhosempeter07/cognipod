@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
-import { fetchStudyGroups, joinStudyGroup } from "../util/firebaseServices";
+import {
+  fetchStudyGroups,
+  joinStudyGroup,
+} from "../util/firebase/services/group";
 import { StudyGroup } from "../util/types";
-import LoadingScreen from "../components/loadingScreen";
 import { AuthContext } from "../util/context/authContext";
 import { useNavigate } from "react-router-dom";
+import { serverTimestamp } from "@firebase/firestore";
 
 const Groups = () => {
   const [groups, setGroups] = useState<StudyGroup[]>([]); // List of groups
@@ -77,9 +80,13 @@ const Groups = () => {
                   ...group,
                   members: [
                     ...group.members,
-                    { memberId: userId, memberType: userType },
+                    {
+                      memberId: userId,
+                      memberType: userType,
+                      joinDate: serverTimestamp(),
+                    },
                   ],
-                  groupSize: group.groupSize * 1 + 1, // Increment group size
+                  groupSize: group.groupSize * 1 + 1,
                 }
               : group
           )
@@ -93,7 +100,11 @@ const Groups = () => {
                   ...prevGroup,
                   members: [
                     ...prevGroup.members,
-                    { memberId: userId, memberType: userType },
+                    {
+                      memberId: userId,
+                      memberType: userType,
+                      joinDate: serverTimestamp(),
+                    },
                   ],
                   groupSize: prevGroup.groupSize * 1 + 1, // Increment group size
                 }
@@ -118,7 +129,7 @@ const Groups = () => {
   };
 
   return (
-    <div className="bg-white text-black min-h-screen p-6">
+    <div className="bg-white text-black min-h-screen p-6 mt-16">
       <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600">
         All Study Groups
       </h1>
@@ -139,18 +150,19 @@ const Groups = () => {
                 onClick={() => handleViewMore(group)}
                 className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
               >
-                View More
+                View group
               </button>
-              {!group.members.some(
-                (member) => member.memberId === user?.uid
-              ) && (
-                <button
-                  onClick={() => group.id && handleJoinGroup(group.id)}
-                  className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
-                >
-                  Join
-                </button>
-              )}
+              {group.members.length === 0 ||
+                (!group.members.some(
+                  (member) => member.memberId === user?.uid
+                ) && (
+                  <button
+                    onClick={() => group.id && handleJoinGroup(group.id)}
+                    className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
+                  >
+                    Join
+                  </button>
+                ))}
             </div>
           </div>
         ))}

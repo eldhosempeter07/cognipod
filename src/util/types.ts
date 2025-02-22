@@ -19,7 +19,7 @@ export interface StudyGroup {
   createdAt: Timestamp | FieldValue;
   joinRequests: string[]; // List of user IDs requesting to join
   activityFeed: string[]; // Activity Feed (e.g., recent activities)
-  members: Array<{ memberId: string; memberType: string }>;
+  members: Member[];
   createdBy: string;
 }
 
@@ -40,4 +40,57 @@ export interface JoinGroup {
   groupId: string;
   userId: string;
   userType: string;
+}
+
+export type Message = {
+  id?: string;
+  text: string;
+  userId: string;
+  createdAt: Timestamp;
+  userEmail?: string;
+  userName?: string;
+};
+
+export type File = {
+  id: string;
+  name: string;
+  url: string;
+  uploadedBy: string;
+  createdAt: Timestamp | FieldValue;
+};
+
+export type Member = {
+  memberId: string;
+  memberType: string;
+  joinDate: Timestamp | FieldValue;
+  email?: string;
+  name?: string;
+  profilePic?: string;
+};
+
+export interface FileProp {
+  name: string;
+  url: string;
+  path: string;
+}
+
+export interface Post {
+  id?: string;
+  title: string;
+  description: string;
+  file?: FileProp | null;
+  uploadedBy: string;
+  createdAt?: Timestamp | FieldValue;
+  userEmail?: string;
+  userName?: string;
+  likes?: string[];
+  comments?: Comment[];
+}
+
+export interface Comment {
+  id: string;
+  text: string;
+  userId: string;
+  createdAt?: Timestamp | FieldValue;
+  userName?: string;
 }

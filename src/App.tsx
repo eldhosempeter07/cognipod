@@ -7,6 +7,9 @@ import SignUpPage from "./pages/signup";
 import CreateGroupPage from "./pages/createGroup";
 import Groups from "./pages/groups";
 import LoadingScreen from "./components/loadingScreen";
+import GroupDetailsPage from "./pages/groupDetails";
+import PostDetail from "./pages/postDetails";
+import Header from "./components/header";
 
 const App = () => {
   const { user, loading } = useContext(AuthContext) ?? {
@@ -24,6 +27,7 @@ const App = () => {
 
   return (
     <>
+      <Header />
       <Routes>
         <Route path="/" element={<Home />} />
         {/* <Route path="/search" element={<Home />} /> */}
@@ -39,6 +43,15 @@ const App = () => {
         />
 
         <Route path="/groups" element={<AuthRouter element={<Groups />} />} />
+        <Route
+          path="/group/:groupId"
+          element={<AuthRouter element={<GroupDetailsPage />} />}
+        />
+
+        <Route
+          path="/:groupId/post/:postId"
+          element={<AuthRouter element={<PostDetail />} />}
+        />
       </Routes>
     </>
   );

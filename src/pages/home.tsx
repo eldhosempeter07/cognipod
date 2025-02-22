@@ -1,14 +1,12 @@
 import { AuthContext } from "../util/context/authContext";
-import { getFeaturedStudyGroups } from "../util/firebaseServices";
+import { getFeaturedStudyGroups } from "../util/firebase/firebaseServices";
 import { FeaturedStudyGroup } from "../util/types";
 import React, { useContext, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import { Link } from "react-router-dom";
 const Home = () => {
-  const { user, loading } = useContext(AuthContext) ?? {
-    user: null,
-    loading: true,
-  };
+  const { user } = useContext(AuthContext) ?? { user: null };
+  const navigate = useNavigate();
 
   const [studyGroup, setStudyGroup] = useState<FeaturedStudyGroup[] | null>(
     null
@@ -18,22 +16,17 @@ const Home = () => {
     const featuredGroups: FeaturedStudyGroup[] = await getFeaturedStudyGroups();
     setStudyGroup(featuredGroups);
   };
+
   useEffect(() => {
     fetchStudyGroups();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
+    <div className="min-h-screen bg-gray-10 mt-28 ">
       <div className="container mx-auto px-2 sm:px-4">
-        <Link
-          to="/signup"
-          className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300"
-        >
-          Sign Up / Login
-        </Link>
         {/* Overview Section */}
         <section className="text-center mb-6 sm:mb-12">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 sm:mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-yellow-500 mb-2 sm:mb-4">
             Welcome to the Virtual Study Group Platform
           </h1>
           <p className="text-sm sm:text-base text-gray-600">
@@ -46,15 +39,16 @@ const Home = () => {
           <input
             type="text"
             placeholder="Search study groups by topic, subject, or tags..."
-            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
           />
         </div>
 
-        {user === null ? null : (
+        {/* Create Group and Join Group Buttons (only for logged-in users) */}
+        {user && (
           <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-6 sm:mb-12">
             <Link
               to={`/create-group/${user.uid}`}
-              className="bg-blue-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-blue-600 transition duration-300 text-sm sm:text-base text-center"
+              className="bg-yellow-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-yellow-600 transition duration-300 text-sm sm:text-base text-center"
             >
               Create a Group
             </Link>
@@ -66,6 +60,7 @@ const Home = () => {
             </Link>
           </div>
         )}
+
         {/* Featured Study Groups */}
         <section>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
@@ -76,9 +71,10 @@ const Home = () => {
               studyGroup.map((group) => (
                 <div
                   key={group.id}
-                  className="bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+                  className="cursor-pointer bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+                  onClick={() => navigate(`group/${group.id}`)}
                 >
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-1 sm:mb-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-yellow-500 tracking-tight mb-1 sm:mb-2">
                     {group.name}
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-600">

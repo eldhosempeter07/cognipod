@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { auth, googleProvider } from "../util/firebase"; // Adjust the path to your Firebase config
+import { auth, googleProvider } from "../util/firebase/firebase"; // Adjust the path to your Firebase config
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   UserCredential,
 } from "firebase/auth";
-import { signUpUser } from "../util/firebaseServices"; // Adjust the path to your Firebase services
+import { signUpUser } from "../util/firebase/firebaseServices"; // Adjust the path to your Firebase services
 import { useNavigate } from "react-router-dom"; // For navigation
 
 // Define the form input types
@@ -73,8 +73,10 @@ export default function SignUpPage() {
               values.email,
               values.password
             );
+
           if (userResponse.user.email) {
             await signUpUser({
+              id: userResponse.user.uid,
               email: userResponse.user.email,
               name: values.name ?? "",
             });
@@ -102,9 +104,9 @@ export default function SignUpPage() {
         auth,
         googleProvider
       );
-      const { email, displayName } = userResponse.user;
+      const { email, displayName, uid } = userResponse.user;
       if (email && displayName) {
-        await signUpUser({ email: email, name: displayName });
+        await signUpUser({ id: uid, email: email, name: displayName });
       }
 
       // Redirect to home page
@@ -119,9 +121,9 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 pt-20">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        <h1 className="text-xl font-bold text-yellow-500 mb-6 text-center uppercase">
           {isLogin ? "Login" : "Sign Up"}
         </h1>
 
@@ -131,7 +133,7 @@ export default function SignUpPage() {
             <div>
               <label
                 htmlFor="name"
-                className="block text-gray-700 font-bold mb-2"
+                className="block text-gray-700 font-medium mb-2"
               >
                 Full Name
               </label>
@@ -139,7 +141,7 @@ export default function SignUpPage() {
                 type="text"
                 id="name"
                 name="name"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 value={formik.values.name}
@@ -155,7 +157,7 @@ export default function SignUpPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-gray-700 font-bold mb-2"
+              className="block text-gray-700 font-medium mb-2"
             >
               Email
             </label>
@@ -163,7 +165,7 @@ export default function SignUpPage() {
               type="email"
               id="email"
               name="email"
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.email}
@@ -176,7 +178,7 @@ export default function SignUpPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-gray-700 font-bold mb-2"
+              className="block text-gray-700 font-medium mb-2"
             >
               Password
             </label>
@@ -184,7 +186,7 @@ export default function SignUpPage() {
               type="password"
               id="password"
               name="password"
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.password}
@@ -202,7 +204,7 @@ export default function SignUpPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            className="w-full bg-gray-900 text-white px-4 py-3 rounded-lg hover:bg-yellow-600 transition duration-300 font-medium"
             disabled={loading}
           >
             {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
@@ -214,7 +216,7 @@ export default function SignUpPage() {
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-500 hover:underline"
+            className="text-gray-500 hover:underline font-medium"
           >
             {isLogin ? "Sign Up" : "Login"}
           </button>
@@ -224,7 +226,7 @@ export default function SignUpPage() {
         <div className="mt-6 space-y-4">
           <button
             onClick={handleGoogleSignIn}
-            className="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+            className="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition duration-300 font-medium"
           >
             Sign in with Google
           </button>
@@ -232,7 +234,7 @@ export default function SignUpPage() {
 
         {/* Link to Home */}
         <p className="text-center text-gray-600 mt-4">
-          <a href="/" className="text-blue-500 hover:underline">
+          <a href="/" className="text-gray-500 hover:underline font-medium">
             Go back to Home
           </a>
         </p>
