@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { addStudyGroup } from "../util/firebase/firebaseServices";
 import { useNavigate, useParams } from "react-router-dom";
 import { serverTimestamp } from "firebase/firestore";
@@ -6,6 +6,8 @@ import { serverTimestamp } from "firebase/firestore";
 export default function CreateGroupForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -29,6 +31,7 @@ export default function CreateGroupForm() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +47,28 @@ export default function CreateGroupForm() {
         };
         // Add the new study group to Firebase
         await addStudyGroup(groupData);
+
         // Redirect to the home page after successful creation
         navigate("/");
       }
     } catch (err) {
-      setError("Failed to create group. Please try again.");
+      if (err instanceof Error) {
+        if (
+          err.message === "A study group with the same name already exists."
+        ) {
+          setNameError(true);
+          if (nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }
+        } else {
+          setError("Failed to create group. Please try again.");
+          setNameError(false);
+        }
+      }
       console.error(err);
     } finally {
       setLoading(false);
@@ -73,32 +93,45 @@ export default function CreateGroupForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mt-8 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-2xl mx-auto mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg"
+    >
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">
         Create a New Study Group
       </h1>
 
       {/* Group Name */}
       <div>
-        <label htmlFor="name" className="block text-gray-700 font-bold mb-2">
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Group Name
         </label>
         <input
           type="text"
           id="name"
           name="name"
+          ref={nameInputRef}
           value={formData.name}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
           required
         />
+
+        {nameError ? (
+          <h3 className="text-red-500 font-semibold mt-1 ml-1">
+            Name Already Exist
+          </h3>
+        ) : null}
       </div>
 
       {/* Description */}
       <div>
         <label
           htmlFor="description"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Description
         </label>
@@ -107,7 +140,7 @@ export default function CreateGroupForm() {
           name="description"
           value={formData.description}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
           required
         />
       </div>
@@ -116,7 +149,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="category"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Category/Topic
         </label>
@@ -126,7 +159,7 @@ export default function CreateGroupForm() {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
           required
         />
       </div>
@@ -135,7 +168,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="groupType"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Group Type
         </label>
@@ -144,7 +177,7 @@ export default function CreateGroupForm() {
           name="groupType"
           value={formData.groupType}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         >
           <option value="Public">Public</option>
           <option value="Private">Private</option>
@@ -153,7 +186,10 @@ export default function CreateGroupForm() {
 
       {/* Goals/Objectives */}
       <div>
-        <label htmlFor="goals" className="block text-gray-700 font-bold mb-2">
+        <label
+          htmlFor="goals"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Goals/Objectives (comma-separated)
         </label>
         <input
@@ -162,7 +198,7 @@ export default function CreateGroupForm() {
           name="goals"
           value={formData.goals.join(",")}
           onChange={(e) => handleArrayChange(e, "goals")}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
@@ -170,7 +206,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="resources"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Resources (comma-separated)
         </label>
@@ -180,13 +216,16 @@ export default function CreateGroupForm() {
           name="resources"
           value={formData.resources.join(",")}
           onChange={(e) => handleArrayChange(e, "resources")}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
       {/* Rules/Guidelines */}
       <div>
-        <label htmlFor="rules" className="block text-gray-700 font-bold mb-2">
+        <label
+          htmlFor="rules"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Rules/Guidelines (comma-separated)
         </label>
         <input
@@ -195,7 +234,7 @@ export default function CreateGroupForm() {
           name="rules"
           value={formData.rules.join(",")}
           onChange={(e) => handleArrayChange(e, "rules")}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
@@ -203,7 +242,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="groupSize"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Group Size
         </label>
@@ -213,13 +252,16 @@ export default function CreateGroupForm() {
           name="groupSize"
           value={formData.groupSize}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
       {/* Tags/Keywords */}
       <div>
-        <label htmlFor="tags" className="block text-gray-700 font-bold mb-2">
+        <label
+          htmlFor="tags"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Tags/Keywords (comma-separated)
         </label>
         <input
@@ -228,7 +270,7 @@ export default function CreateGroupForm() {
           name="tags"
           value={formData.tags.join(",")}
           onChange={(e) => handleArrayChange(e, "tags")}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
@@ -236,7 +278,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="groupImage"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Group Image/Logo URL
         </label>
@@ -246,7 +288,7 @@ export default function CreateGroupForm() {
           name="groupImage"
           value={formData.groupImage}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         />
       </div>
 
@@ -254,7 +296,7 @@ export default function CreateGroupForm() {
       <div>
         <label
           htmlFor="groupStatus"
-          className="block text-gray-700 font-bold mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Group Status
         </label>
@@ -263,7 +305,7 @@ export default function CreateGroupForm() {
           name="groupStatus"
           value={formData.groupStatus}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
         >
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
@@ -271,13 +313,13 @@ export default function CreateGroupForm() {
       </div>
 
       {/* Error Message */}
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
 
       {/* Submit Button */}
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 disabled:bg-blue-300"
+        className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-blue-300 disabled:cursor-not-allowed"
       >
         {loading ? "Creating..." : "Create Group"}
       </button>

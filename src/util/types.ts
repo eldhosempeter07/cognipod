@@ -14,7 +14,6 @@ export interface StudyGroup {
   groupAdmin: string; // Group Admin/Owner ID
   resources: string[]; // Resources (e.g., links to documents)
   discussionThreads: string[]; // Discussion Threads (e.g., thread IDs)
-  // progressTracking: string; // Progress Tracking (e.g., "50% completed")
   groupSize: number; // Group Size (e.g., 10 members)
   createdAt: Timestamp | FieldValue;
   joinRequests: string[]; // List of user IDs requesting to join
@@ -34,6 +33,8 @@ export interface User {
   id?: string;
   name: string;
   email: string;
+  path?: string;
+  imageUrl?: string;
 }
 
 export interface JoinGroup {
@@ -46,7 +47,8 @@ export type Message = {
   id?: string;
   text: string;
   userId: string;
-  createdAt: Timestamp;
+  createdAt?: Timestamp;
+  timestamp?: Timestamp;
   userEmail?: string;
   userName?: string;
 };
@@ -94,3 +96,28 @@ export interface Comment {
   createdAt?: Timestamp | FieldValue;
   userName?: string;
 }
+
+export interface SessionData {
+  id?: string;
+  name: string;
+  description: string;
+  goals: string;
+  type: "text" | "in-person";
+  privacy: "public" | "private";
+  selectedGroup: string | null;
+  password?: string | null;
+  createdBy: string;
+  createdDate: Date;
+  meetingDate: Timestamp | Date;
+  code?: string;
+  output?: string;
+  moderator: string;
+  collaborators?: string[];
+  status: string;
+  joined?: string[];
+}
+
+export type SessionGroupInputs = {
+  id: string;
+  name: string;
+};

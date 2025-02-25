@@ -6,6 +6,7 @@
     "paths": {
       "@/*": ["./*"]
     },
+
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

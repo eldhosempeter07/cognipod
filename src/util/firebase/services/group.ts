@@ -14,6 +14,7 @@ import {
   limit,
   arrayRemove,
   Timestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../firebase";
@@ -23,6 +24,7 @@ import {
   Member,
   Message,
   Post,
+  SessionGroupInputs,
   StudyGroup,
 } from "@/util/types";
 
@@ -425,5 +427,51 @@ export const fetchComments = async (
   } catch (error) {
     console.error("Error fetching comments: ", error);
     return [];
+  }
+};
+
+export const getUserGroups = async (
+  userId: string
+): Promise<SessionGroupInputs[]> => {
+  try {
+    console.log("Fetching groups for user:", userId);
+
+    const studyGroupsRef = collection(db, "studyGroups");
+    const querySnapshot = await getDocs(studyGroupsRef);
+
+    const groups: SessionGroupInputs[] = [];
+    console.log("Total groups:", querySnapshot.size);
+
+    querySnapshot.forEach((doc) => {
+      const members = doc.data().members;
+      const isMember = members.some(
+        (member: any) => member.memberId === userId
+      );
+
+      if (isMember) {
+        groups.push({
+          id: doc.id,
+          name: doc.data().name,
+        });
+      }
+    });
+
+    console.log("Number of groups user is a member of:", groups.length);
+    return groups;
+  } catch (error) {
+    console.error("Error fetching user groups: ", error);
+    throw new Error("Failed to fetch user groups. Please try again.");
+  }
+};
+
+export const deleteGroup = async (groupId: string) => {
+  try {
+    const sessionRef = doc(db, "studyGroups", groupId);
+
+    await deleteDoc(sessionRef);
+
+    console.log("Group deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting group:", error);
   }
 };

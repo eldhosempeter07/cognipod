@@ -39,13 +39,15 @@ const Chat: FC<ChatProps> = ({ groupId, messages, user }) => {
     const groupedMessages: { [key: string]: Message[] } = {};
 
     messages.forEach((message) => {
-      const date = new Date(message.createdAt?.toDate());
-      const dateKey = date.toDateString();
+      if (message.createdAt) {
+        const date = new Date(message.createdAt?.toDate());
+        const dateKey = date.toDateString();
 
-      if (!groupedMessages[dateKey]) {
-        groupedMessages[dateKey] = [];
+        if (!groupedMessages[dateKey]) {
+          groupedMessages[dateKey] = [];
+        }
+        groupedMessages[dateKey].push(message);
       }
-      groupedMessages[dateKey].push(message);
     });
 
     return groupedMessages;
@@ -147,12 +149,13 @@ const Chat: FC<ChatProps> = ({ groupId, messages, user }) => {
 
                         {/* Timestamp */}
                         <span className="text-xs text-gray-600 block text-right mt-1">
-                          {new Date(
-                            message.createdAt?.toDate()
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {message.createdAt &&
+                            new Date(
+                              message.createdAt?.toDate()
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                         </span>
                       </div>
                     </div>

@@ -9,10 +9,10 @@ import { useNavigate } from "react-router-dom";
 import { serverTimestamp } from "@firebase/firestore";
 
 const Groups = () => {
-  const [groups, setGroups] = useState<StudyGroup[]>([]); // List of groups
-  const [lastVisible, setLastVisible] = useState(null); // Last document for pagination
-  const [loading, setLoading] = useState(false); // Loading state
-  const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null); // Selected group for popup
+  const [groups, setGroups] = useState<StudyGroup[]>([]);
+  const [lastVisible, setLastVisible] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
   const { user } = useContext(AuthContext) ?? {
     user: null,
     loading: true,
@@ -20,7 +20,6 @@ const Groups = () => {
 
   const navigate = useNavigate();
 
-  // Fetch initial 5 groups
   useEffect(() => {
     fetchGroups();
   }, []);

@@ -3,6 +3,7 @@ import { getPosts } from "../util/firebase/services/group";
 import { Post } from "@/util/types";
 import PostImage from "./postImage";
 import profile from "../util/images/profile.jpg";
+import { useNavigate } from "react-router-dom";
 
 interface PostFeedProps {
   postLoading: boolean;
@@ -17,8 +18,7 @@ const PostFeed: React.FC<PostFeedProps> = ({
   handlePostLike,
   groupId,
 }) => {
-  console.log(posts);
-
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
       {/* {postLoading && (
@@ -69,7 +69,10 @@ const PostFeed: React.FC<PostFeedProps> = ({
               </svg>
               <span>{post.likes?.length || null}</span>
             </button>
-            <button className="flex items-center space-x-2 hover:text-yellow-500 transition-colors duration-200">
+            <button
+              className="flex items-center space-x-2 hover:text-yellow-500 transition-colors duration-200"
+              onClick={() => navigate(`/${groupId}/post/${post.id}`)}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5"

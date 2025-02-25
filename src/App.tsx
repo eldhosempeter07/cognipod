@@ -10,6 +10,10 @@ import LoadingScreen from "./components/loadingScreen";
 import GroupDetailsPage from "./pages/groupDetails";
 import PostDetail from "./pages/postDetails";
 import Header from "./components/header";
+import CreateSession from "./pages/createSession";
+import SessionsPage from "./pages/sessions";
+import Profile from "./pages/profile";
+import SessionDetails from "./pages/sessionDetails";
 
 const App = () => {
   const { user, loading } = useContext(AuthContext) ?? {
@@ -42,6 +46,15 @@ const App = () => {
           element={<AuthRouter element={<CreateGroupPage />} />}
         />
 
+        <Route
+          path="/profile/:id"
+          element={<AuthRouter element={<Profile />} />}
+        />
+        <Route
+          path="/create-session/:id"
+          element={<AuthRouter element={<CreateSession />} />}
+        />
+
         <Route path="/groups" element={<AuthRouter element={<Groups />} />} />
         <Route
           path="/group/:groupId"
@@ -51,6 +64,16 @@ const App = () => {
         <Route
           path="/:groupId/post/:postId"
           element={<AuthRouter element={<PostDetail />} />}
+        />
+
+        <Route
+          path="/sessions"
+          element={<AuthRouter element={<SessionsPage />} />}
+        />
+
+        <Route
+          path="/session/:sessionId"
+          element={<AuthRouter element={<SessionDetails />} />}
         />
       </Routes>
     </>
