@@ -9,8 +9,15 @@ import {
   setDoc,
   updateDoc,
   getDoc,
+  increment,
 } from "firebase/firestore";
-import { FeaturedStudyGroup, StudyGroup, User } from "../types";
+import {
+  FeaturedStudyGroup,
+  Member,
+  PostData,
+  StudyGroup,
+  User,
+} from "../types";
 import { getDownloadURL, ref, uploadBytes } from "@firebase/storage";
 import { getFileExtension } from "../functions";
 
@@ -22,18 +29,23 @@ export const getStudyGroups = async () => {
 };
 
 // Fetch featured study groups
-export const getFeaturedStudyGroups = async (): Promise<
-  FeaturedStudyGroup[]
-> => {
+
+export const getFeaturedStudyGroups = async (
+  userId: string
+): Promise<FeaturedStudyGroup[]> => {
   const studyGroupsRef = collection(db, "studyGroups");
   const querySnapshot = await getDocs(studyGroupsRef);
 
-  return querySnapshot.docs.map((doc) => ({
-    id: doc.id,
-    name: doc.data().name,
-    description: doc.data().description,
-    featured: doc.data().featured,
-  }));
+  return querySnapshot.docs
+    .filter((doc) => {
+      const members = doc.data().members || [];
+      return members.some((member: any) => member.memberId === userId);
+    })
+    .map((doc) => ({
+      id: doc.id,
+      name: doc.data().name,
+      description: doc.data().description,
+    }));
 };
 
 export const addStudyGroup = async (groupData: StudyGroup) => {
@@ -98,4 +110,69 @@ export const uploadProfileImage = async (userId: string, file: File) => {
   await uploadBytes(storageRef, file);
   const downloadURL = await getDownloadURL(storageRef);
   return downloadURL;
+};
+
+export const triggerGroupPostNotification = async (postData: PostData) => {
+  const {
+    groupId,
+    postId,
+    members,
+    authorId,
+
+    link,
+    postAuthorName,
+    groupName,
+  } = postData;
+  try {
+    const response = await fetch("http://localhost:3001/notify/newGroupPost", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        groupId,
+        postId,
+        members,
+        authorId,
+        postAuthorName,
+        groupName,
+        link,
+      }),
+    });
+    const result = await response.json();
+    console.log("Notification triggered:", result);
+  } catch (error) {
+    console.error("Error triggering notification:", error);
+  }
+};
+
+export const markNotificationsAsRead = async (userId: string) => {
+  if (!userId) {
+    console.error("Error: userId is required.");
+    return;
+  }
+
+  try {
+    const notificationsRef = collection(db, "users", userId, "notifications");
+
+    const q = query(notificationsRef, where("read", "==", false));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.log("No unread notifications to update.");
+      return;
+    }
+
+    const updatePromises = querySnapshot.docs.map((docSnapshot) =>
+      updateDoc(doc(db, "users", userId, "notifications", docSnapshot.id), {
+        read: true,
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    console.log(
+      `Marked ${querySnapshot.size} notifications as read for user: ${userId}`
+    );
+  } catch (error) {
+    console.error("Error updating notifications:", error);
+  }
 };

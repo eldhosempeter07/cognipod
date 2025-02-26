@@ -132,7 +132,6 @@ const PostDetail = () => {
                 </div>
               </li>
               <p className="text-sm text-gray-500">
-                By User {comment.userId} •{" "}
                 <span className="text-xs text-gray-600 block text-right mt-1">
                   {comment.createdAt instanceof Timestamp
                     ? new Date(comment.createdAt?.toDate()).toLocaleTimeString(

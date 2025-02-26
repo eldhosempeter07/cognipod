@@ -2,11 +2,13 @@ import { useRef, useState } from "react";
 import { addStudyGroup } from "../util/firebase/firebaseServices";
 import { useNavigate, useParams } from "react-router-dom";
 import { serverTimestamp } from "firebase/firestore";
+import { uploadGroupCoverImage } from "../util/firebase/services/group";
 
 export default function CreateGroupForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -14,7 +16,7 @@ export default function CreateGroupForm() {
     category: "",
     groupType: "Public",
     members: [],
-    groupAdmin: "",
+    groupAdmin: [],
     meetingSchedule: "",
     meetingLocation: "",
     goals: [],
@@ -32,6 +34,7 @@ export default function CreateGroupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,11 +43,25 @@ export default function CreateGroupForm() {
 
     try {
       if (id !== undefined) {
+        let imageUrl = "";
+
+        // Upload the image if a file is selected
+        if (selectedFile) {
+          imageUrl = await uploadGroupCoverImage(formData.name, selectedFile);
+        }
+
         const groupData = {
           ...formData,
+          groupImage: imageUrl, // Update the groupImage field with the uploaded image URL
           createdBy: id,
           createdAt: serverTimestamp(),
+          groupAdmin: [...formData.groupAdmin, id],
+          members: [
+            ...formData.members,
+            { memberId: id, memberType: "Admin", joinDate: new Date() },
+          ],
         };
+
         // Add the new study group to Firebase
         await addStudyGroup(groupData);
 
@@ -90,6 +107,12 @@ export default function CreateGroupForm() {
   ) => {
     const { value } = e.target;
     setFormData((prev) => ({ ...prev, [field]: value.split(",") }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]); // Store the selected file
+    }
   };
 
   return (
@@ -280,16 +303,26 @@ export default function CreateGroupForm() {
           htmlFor="groupImage"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
-          Group Image/Logo URL
+          Group Image/Logo
         </label>
         <input
-          type="text"
+          type="file"
           id="groupImage"
           name="groupImage"
-          value={formData.groupImage}
-          onChange={handleChange}
+          onChange={handleFileChange}
           className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
+          accept="image/*"
+          ref={fileInputRef}
         />
+        {selectedFile && (
+          <div className="mt-2">
+            <img
+              src={URL.createObjectURL(selectedFile)} // Preview the selected file
+              alt="Group Preview"
+              className="w-32 h-32 object-cover rounded-lg"
+            />
+          </div>
+        )}
       </div>
 
       {/* Group Status */}

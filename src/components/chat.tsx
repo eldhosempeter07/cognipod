@@ -133,7 +133,7 @@ const Chat: FC<ChatProps> = ({ groupId, messages, user }) => {
                       <div
                         className={`max-w-[75%] px-3 py-2 rounded-lg shadow-sm ${
                           isUserMessage
-                            ? "bg-yellow-500 text-black"
+                            ? "bg-yellow-500 text-white"
                             : "bg-gray-300 text-black"
                         }`}
                       >
@@ -148,7 +148,7 @@ const Chat: FC<ChatProps> = ({ groupId, messages, user }) => {
                         <p className="text-sm mt-1">{message.text}</p>
 
                         {/* Timestamp */}
-                        <span className="text-xs text-gray-600 block text-right mt-1">
+                        <span className="text-xs  text-white block text-right mt-1">
                           {message.createdAt &&
                             new Date(
                               message.createdAt?.toDate()
@@ -182,6 +182,7 @@ const Chat: FC<ChatProps> = ({ groupId, messages, user }) => {
               onClick={handleSendMessage}
               className="bg-yellow-500 disabled:bg-yellow-200 text-white font-bold px-4 py-2 rounded-lg hover:bg-yellow-600 transition"
               disabled={newMessage === ""}
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
             >
               Send
             </button>

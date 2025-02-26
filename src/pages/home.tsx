@@ -13,8 +13,12 @@ const Home = () => {
   );
 
   const fetchStudyGroups = async () => {
-    const featuredGroups: FeaturedStudyGroup[] = await getFeaturedStudyGroups();
-    setStudyGroup(featuredGroups);
+    if (user?.uid) {
+      const featuredGroups: FeaturedStudyGroup[] = await getFeaturedStudyGroups(
+        user.uid
+      );
+      setStudyGroup(featuredGroups);
+    }
   };
 
   useEffect(() => {
@@ -62,28 +66,30 @@ const Home = () => {
         )}
 
         {/* Featured Study Groups */}
-        <section>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
-            Featured Study Groups
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {studyGroup !== null &&
-              studyGroup.map((group) => (
-                <div
-                  key={group.id}
-                  className="cursor-pointer bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
-                  onClick={() => navigate(`group/${group.id}`)}
-                >
-                  <h3 className="text-lg sm:text-xl font-semibold text-yellow-500 tracking-tight mb-1 sm:mb-2">
-                    {group.name}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    {group.description}
-                  </p>
-                </div>
-              ))}
-          </div>
-        </section>
+        {fetchStudyGroups.length === 0 ? null : (
+          <section>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
+              Featured Study Groups
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {studyGroup !== null &&
+                studyGroup.map((group) => (
+                  <div
+                    key={group.id}
+                    className="cursor-pointer bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+                    onClick={() => navigate(`group/${group.id}`)}
+                  >
+                    <h3 className="text-lg sm:text-xl font-semibold text-yellow-500 tracking-tight mb-1 sm:mb-2">
+                      {group.name}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {group.description}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

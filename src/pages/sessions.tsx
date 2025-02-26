@@ -10,7 +10,7 @@ import SessionPasswordPopup from "../components/sessionPasswordPopup";
 import { SessionData } from "../util/types";
 import { auth } from "../util/firebase/firebase";
 import { Timestamp } from "firebase/firestore"; // Import Timestamp
-import ExitSessionPopup from "../components/ExitSessionPopup";
+import ExitSessionPopup from "../components/popup";
 
 const SessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<SessionData[]>([]);
@@ -218,6 +218,7 @@ const SessionsPage: React.FC = () => {
           heading="Delete Session"
           body="Are you sure you want to delete the session?"
           buttonText="Delete Session"
+          input={false}
         />
       )}
     </div>

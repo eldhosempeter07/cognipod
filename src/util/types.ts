@@ -1,23 +1,23 @@
 import { FieldValue, Timestamp } from "firebase/firestore";
 
 export interface StudyGroup {
-  id?: string; // Document ID from Firestore
-  name: string; // Group Name
-  description: string; // Description
-  groupImage: string; // Group Image/Logo URL
-  category: string; // Category/Topic
-  rules: string[]; // Rules/Guidelines
-  goals: string[]; // Goals/Objectives
-  groupType: string; // Group Type (e.g., Public, Private)
-  groupStatus: string; // Group Status (e.g., "Active", "Inactive")
-  tags: string[]; // Tags/Keywords
-  groupAdmin: string; // Group Admin/Owner ID
-  resources: string[]; // Resources (e.g., links to documents)
-  discussionThreads: string[]; // Discussion Threads (e.g., thread IDs)
-  groupSize: number; // Group Size (e.g., 10 members)
+  id?: string;
+  name: string;
+  description: string;
+  groupImage: string;
+  category: string;
+  rules: string[];
+  goals: string[];
+  groupType: string;
+  groupStatus: string;
+  tags: string[];
+  groupAdmin: string[];
+  resources: string[];
+  discussionThreads: string[];
+  groupSize: number;
   createdAt: Timestamp | FieldValue;
-  joinRequests: string[]; // List of user IDs requesting to join
-  activityFeed: string[]; // Activity Feed (e.g., recent activities)
+  joinRequests: JoinGroup[];
+  activityFeed: string[];
   members: Member[];
   createdBy: string;
 }
@@ -29,10 +29,26 @@ export interface FeaturedStudyGroup {
   featured?: boolean; // Optional field to indicate if the group is featured
 }
 
+export interface EditStudyGroup {
+  name: string;
+  description: string;
+  groupImage: string;
+  category: string;
+  rules: string[];
+  goals: string[];
+  groupType: string;
+  groupStatus: string;
+  tags: string[];
+  resources: string[];
+  groupSize: number;
+  createdAt: Timestamp | FieldValue;
+  activityFeed: string[];
+}
+
 export interface User {
   id?: string;
-  name: string;
-  email: string;
+  name?: string;
+  email: string | null;
   path?: string;
   imageUrl?: string;
 }
@@ -41,6 +57,9 @@ export interface JoinGroup {
   groupId: string;
   userId: string;
   userType: string;
+  email?: string;
+  name?: string;
+  imageUrl?: string;
 }
 
 export type Message = {
@@ -64,7 +83,7 @@ export type File = {
 export type Member = {
   memberId: string;
   memberType: string;
-  joinDate: Timestamp | FieldValue;
+  joinDate: Timestamp | FieldValue | Date;
   email?: string;
   name?: string;
   profilePic?: string;
@@ -121,3 +140,14 @@ export type SessionGroupInputs = {
   id: string;
   name: string;
 };
+
+export interface PostData {
+  postId: string;
+  authorId: string;
+  postAuthorName: string;
+  members: Member[];
+  groupId?: string; // Optional if posts can be outside a group
+  groupName: string; // Optional if posts can be outside a group
+  timestamp: any; // Firestore timestamp
+  link: string;
+}

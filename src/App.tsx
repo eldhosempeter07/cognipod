@@ -14,6 +14,9 @@ import CreateSession from "./pages/createSession";
 import SessionsPage from "./pages/sessions";
 import Profile from "./pages/profile";
 import SessionDetails from "./pages/sessionDetails";
+import EditGroupPage from "./pages/editGroup";
+import JoinRequestsPage from "./pages/joinRequest";
+import MembersPage from "./pages/members";
 
 const App = () => {
   const { user, loading } = useContext(AuthContext) ?? {
@@ -75,6 +78,17 @@ const App = () => {
           path="/session/:sessionId"
           element={<AuthRouter element={<SessionDetails />} />}
         />
+
+        <Route
+          path="group/:groupId/edit"
+          element={<AuthRouter element={<EditGroupPage />} />}
+        />
+
+        <Route
+          path="/group/:groupId/join-requests"
+          element={<AuthRouter element={<JoinRequestsPage />} />}
+        />
+        <Route path="/group/:groupId/members" element={<MembersPage />} />
       </Routes>
     </>
   );

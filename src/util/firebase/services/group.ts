@@ -16,10 +16,11 @@ import {
   Timestamp,
   deleteDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, getStorage } from "firebase/storage";
 import { db, storage } from "../firebase";
 import {
   Comment,
+  EditStudyGroup,
   JoinGroup,
   Member,
   Message,
@@ -109,58 +110,102 @@ export const joinStudyGroup = async (user: JoinGroup) => {
   }
 };
 
+const fetchUserDetails = async (id: string) => {
+  try {
+    console.log("userId", id);
+
+    if (!id) {
+      throw new Error("User ID is undefined");
+    }
+
+    const userRef = doc(db, "users", id);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      return {
+        email: userData?.email || "",
+        name: userData?.name || "",
+        imageUrl: userData?.imageUrl || "",
+      };
+    } else {
+      console.warn("User document does not exist for ID:", id);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    return null;
+  }
+};
+
+const enrichMembers = async (members: Member[]) => {
+  console.log("hi");
+  if (members.length === 0) return;
+  console.log(members);
+
+  return Promise.all(
+    members.map(async (member) => {
+      const userDetails = await fetchUserDetails(member.memberId);
+      return {
+        ...member,
+        ...(userDetails || {}),
+      };
+    })
+  );
+};
+
+const enrichJoinRequests = async (joinRequests: JoinGroup[]) => {
+  if (joinRequests.length === 0) return;
+
+  return Promise.all(
+    joinRequests.map(async (request) => {
+      const userDetails = await fetchUserDetails(request.userId);
+      return {
+        ...request,
+        ...(userDetails || {}), // Add user details if available
+      };
+    })
+  );
+};
+
 export const fetchGroupDetails = async (
   groupId: string
 ): Promise<StudyGroup | null> => {
   const groupRef = doc(db, "studyGroups", groupId);
   const groupDoc = await getDoc(groupRef);
 
-  if (groupDoc.exists()) {
-    const groupData = groupDoc.data();
-
-    // Fetch user details for each member
-    const membersWithDetails = await Promise.all(
-      groupData.members.map(async (member: Member) => {
-        const userRef = doc(db, "users", member.memberId);
-        const userDoc = await getDoc(userRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          return {
-            ...member,
-            email: userData.email || "", // Add email from user details
-            name: userData.name || "", // Add name from user details
-          };
-        }
-
-        return member; // Return the member as-is if user details are not found
-      })
-    );
-
-    return {
-      id: groupDoc.id,
-      name: groupData.name || "",
-      description: groupData.description || "",
-      category: groupData.category || "",
-      groupType: groupData.groupType || "",
-      members: membersWithDetails, // Use the updated members array with user details
-      groupAdmin: groupData.groupAdmin || "",
-      goals: groupData.goals || [],
-      resources: groupData.resources || [],
-      discussionThreads: groupData.discussionThreads || [],
-      rules: groupData.rules || [],
-      groupSize: groupData.groupSize || 0,
-      tags: groupData.tags || [],
-      groupImage: groupData.groupImage || "",
-      joinRequests: groupData.joinRequests || [],
-      activityFeed: groupData.activityFeed || [],
-      groupStatus: groupData.groupStatus || "",
-      createdAt: groupData.createdAt || null,
-      createdBy: groupData.createdBy || "",
-    };
+  if (!groupDoc.exists()) {
+    return null;
   }
 
-  return null;
+  const groupData = groupDoc.data();
+
+  const membersWithDetails = await enrichMembers(groupData.members || []);
+  const joinRequestsWithDetails = await enrichJoinRequests(
+    groupData.joinRequests || []
+  );
+
+  return {
+    id: groupDoc.id,
+    name: groupData.name || "",
+    description: groupData.description || "",
+    category: groupData.category || "",
+    groupType: groupData.groupType || "",
+    members: membersWithDetails || [],
+    groupAdmin: groupData.groupAdmin || "",
+    goals: groupData.goals || [],
+    resources: groupData.resources || [],
+    discussionThreads: groupData.discussionThreads || [],
+    rules: groupData.rules || [],
+    groupSize: groupData.groupSize || 0,
+    tags: groupData.tags || [],
+    groupImage: groupData.groupImage || "",
+    joinRequests: joinRequestsWithDetails || [],
+    activityFeed: groupData.activityFeed || [],
+    groupStatus: groupData.groupStatus || "",
+    createdAt: groupData.createdAt || null,
+    createdBy: groupData.createdBy || "",
+  };
 };
 
 // Fetch real-time messages
@@ -197,11 +242,11 @@ export const subscribeToMessages = (
         }
         console.log(message);
 
-        return message; // Return the message as-is if user details are not found
+        return message;
       })
     );
 
-    callback(messagesWithUserDetails); // Pass the updated messages list to the callback
+    callback(messagesWithUserDetails);
   });
 };
 
@@ -258,10 +303,11 @@ export const createPost = async (
   post: Omit<Post, "id" | "createdAt">
 ) => {
   const postsRef = collection(db, "studyGroups", groupId, "posts");
-  await addDoc(postsRef, {
+  const doc = await addDoc(postsRef, {
     ...post,
     createdAt: serverTimestamp(),
   });
+  return doc.id;
 };
 
 export const getPosts = async (groupId: string): Promise<Post[]> => {
@@ -474,4 +520,104 @@ export const deleteGroup = async (groupId: string) => {
   } catch (error) {
     console.error("Error deleting group:", error);
   }
+};
+
+export const uploadGroupCoverImage = async (groupName: string, file: File) => {
+  const storageRef = ref(storage, `group-covers/${groupName}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+  return downloadURL;
+};
+
+export const editGroup = async (
+  groupId: string,
+  groupData: Partial<EditStudyGroup>
+) => {
+  const groupRef = doc(db, "studyGroups", groupId);
+
+  // Convert the groupData object to a format compatible with Firestore
+  const updateData: { [key: string]: any } = {};
+  for (const [key, value] of Object.entries(groupData)) {
+    updateData[key] = value;
+  }
+
+  await updateDoc(groupRef, updateData);
+};
+
+export const addJoinRequest = async (
+  groupId: string,
+  userId: string,
+  userType: string
+): Promise<void> => {
+  const studyGroupRef = doc(db, "studyGroups", groupId);
+
+  try {
+    await updateDoc(studyGroupRef, {
+      joinRequests: arrayUnion({ userId, userType }),
+    });
+    console.log("Join request added successfully!");
+  } catch (error) {
+    console.error("Error adding join request: ", error);
+    throw new Error("Failed to add join request.");
+  }
+};
+
+export const handleRejectRequest = async (
+  groupId: string,
+  userId: string,
+  type: string
+): Promise<void> => {
+  const studyGroupRef = doc(db, "studyGroups", groupId);
+
+  try {
+    await updateDoc(studyGroupRef, {
+      joinRequests: arrayRemove({ userId, userType: type }), //
+    });
+    console.log("Join request rejected successfully!");
+  } catch (error) {
+    console.error("Error rejecting join request: ", error);
+    throw new Error("Failed to reject join request.");
+  }
+};
+
+export const handleAcceptRequest = async (
+  groupId: string,
+  userId: string,
+  type: string
+): Promise<void> => {
+  const studyGroupRef = doc(db, "studyGroups", groupId);
+
+  try {
+    await updateDoc(studyGroupRef, {
+      members: arrayUnion({
+        memberId: userId,
+        memberType: "student",
+        joinDate: new Date(),
+      }),
+      joinRequests: arrayRemove({ userId, userType: type }),
+    });
+    console.log("Join request accepted successfully!");
+  } catch (error) {
+    console.error("Error accepting join request: ", error);
+    throw new Error("Failed to accept join request.");
+  }
+};
+
+export const updateGroupMembers = async (
+  groupId: string,
+  members: Member[]
+) => {
+  const groupRef = doc(db, "studyGroups", groupId);
+  await updateDoc(groupRef, { members });
+};
+
+export const uploadGroupImage = async (groupId: string, file: File) => {
+  const storageRef = ref(storage, `studyGroups/${groupId}/profile`);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+};
+
+export const updateGroupImage = async (groupId: string, imageUrl: string) => {
+  const groupRef = doc(db, "studyGroups", groupId);
+  await updateDoc(groupRef, { groupImage: imageUrl });
 };

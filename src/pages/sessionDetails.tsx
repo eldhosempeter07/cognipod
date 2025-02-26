@@ -13,7 +13,7 @@ import CodeEditor from "../components/CodeEditor";
 import { ResizableBox } from "react-resizable";
 import "react-resizable/css/styles.css";
 import { AuthContext } from "../util/context/authContext";
-import ExitSessionPopup from "../components/ExitSessionPopup";
+import ExitSessionPopup from "../components/popup";
 import { Message, SessionData, User } from "../util/types";
 
 import { doc, getDoc } from "firebase/firestore";
@@ -41,14 +41,13 @@ const SessionDetails: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isSessionEnded || (session && isSessionEnded)) return;
+    if (isSessionEnded) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isSessionEnded) return;
       event.preventDefault();
-      if (!isPopupOpen) {
-        event.returnValue = ""; // Required for Chrome
-        return "Are you sure you want to leave? Your changes may not be saved.";
-      }
+      event.returnValue = "";
+      return "Are you sure you want to leave? Your changes may not be saved.";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -56,7 +55,7 @@ const SessionDetails: React.FC = () => {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isPopupOpen]);
+  }, [isSessionEnded]);
 
   const fetchUserNames = async (userIds: string[]) => {
     const users: User[] = [];
@@ -166,7 +165,7 @@ const SessionDetails: React.FC = () => {
       }
       navigate("/sessions");
     } catch (error) {
-      alert("Please manually close this tab or window.");
+      console.log(error);
     }
     setIsPopupOpen(false);
   };
@@ -189,11 +188,33 @@ const SessionDetails: React.FC = () => {
   };
 
   return (
-    <div className="mt-16">
+    <div className="mt-20">
       <div className="flex justify-between">
-        <h2 className="text-2xl font-semibold mb-6 ml-8">{session.name}</h2>
+        <div>
+          <h2 className="text-2xl font-semibold mb-2 ml-8">{session.name}</h2>
+          <p className="text-lg font-semibold mb-6 ml-8">
+            {session.description}
+          </p>
+        </div>
         <div className="flex flex-wrap md:flex-row flex-col">
-          {session && isSessionEnded ? null : (
+          {session && isSessionEnded ? (
+            <div>
+              <h3 className="mr-3 text-red-500 font-semibold mt-5 mb-3">
+                Meeting Ended by Moderator
+              </h3>
+              <a
+                href="/sessions"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.onbeforeunload = null;
+                  window.location.href = "/sessions";
+                }}
+                className="px-4 py-2 inline-block bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-200"
+              >
+                Back To Sessions
+              </a>
+            </div>
+          ) : (
             <div>
               <button
                 onClick={handleExitSession}
@@ -222,6 +243,7 @@ const SessionDetails: React.FC = () => {
                   buttonText={`${
                     session.moderator === user?.uid ? "End" : "Leave"
                   } Session `}
+                  input={false}
                 />
               )}
             </div>

@@ -1,29 +1,28 @@
 import React, { useState, useEffect, useContext } from "react";
 import {
+  addJoinRequest,
   fetchStudyGroups,
   joinStudyGroup,
 } from "../util/firebase/services/group";
 import { StudyGroup } from "../util/types";
 import { AuthContext } from "../util/context/authContext";
 import { useNavigate } from "react-router-dom";
-import { serverTimestamp } from "@firebase/firestore";
+import GroupDetailsModal from "../components/GroupDetailsModal";
 
 const Groups = () => {
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [lastVisible, setLastVisible] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
-  const { user } = useContext(AuthContext) ?? {
-    user: null,
-    loading: true,
-  };
-
+  const { user } = useContext(AuthContext) ?? { user: null };
   const navigate = useNavigate();
 
+  // Fetch groups on initial load
   useEffect(() => {
     fetchGroups();
   }, []);
 
+  // Fetch groups with infinite scroll
   const fetchGroups = async () => {
     setLoading(true);
     try {
@@ -32,9 +31,7 @@ const Groups = () => {
 
       setGroups((prev) => {
         const uniqueGroups = [...prev, ...newGroups].reduce((acc, group) => {
-          if (!acc.some((g) => g.id === group.id)) {
-            acc.push(group);
-          }
+          if (!acc.some((g) => g.id === group.id)) acc.push(group);
           return acc;
         }, [] as StudyGroup[]);
         return uniqueGroups;
@@ -42,8 +39,9 @@ const Groups = () => {
       setLastVisible(newLastVisible);
     } catch (error) {
       console.error("Error fetching groups: ", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Handle infinite scroll
@@ -61,70 +59,83 @@ const Groups = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastVisible]);
 
-  // Handle join group
-  const handleJoinGroup = async (groupId: string) => {
+  // Handle joining a group
+  const handleJoinGroup = async (groupId: string, type: string) => {
+    if (!user?.uid) return;
+
     try {
-      if (user?.uid !== undefined) {
-        const userId = user?.uid;
-        const userType = "student";
+      if (type === "Private") {
+        await addJoinRequest(groupId, user.uid, "member");
+      } else {
+        await joinStudyGroup({ groupId, userId: user.uid, userType: "member" });
+      }
 
-        // Call the joinStudyGroup function to update Firestore
-        await joinStudyGroup({ groupId, userId, userType });
+      // Update local state
+      setGroups((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                members: [
+                  ...group.members,
+                  {
+                    memberId: user.uid,
+                    memberType: "member",
+                    joinDate: new Date(),
+                  },
+                ],
+                groupSize: group.groupSize + 1,
+              }
+            : group
+        )
+      );
 
-        // Update the local state to reflect the new member
-        setGroups((prevGroups) =>
-          prevGroups.map((group) =>
-            group.id === groupId
-              ? {
-                  ...group,
-                  members: [
-                    ...group.members,
-                    {
-                      memberId: userId,
-                      memberType: userType,
-                      joinDate: serverTimestamp(),
-                    },
-                  ],
-                  groupSize: group.groupSize * 1 + 1,
-                }
-              : group
-          )
+      // Update selected group if it's the one being joined
+      if (selectedGroup?.id === groupId) {
+        setSelectedGroup((prevGroup) =>
+          prevGroup
+            ? {
+                ...prevGroup,
+                members: [
+                  ...prevGroup.members,
+                  {
+                    memberId: user.uid,
+                    memberType: "member",
+                    joinDate: new Date(),
+                  },
+                ],
+                groupSize: prevGroup.groupSize + 1,
+              }
+            : prevGroup
         );
-
-        // If the selected group is the one being joined, update it as well
-        if (selectedGroup?.id === groupId) {
-          setSelectedGroup((prevGroup) =>
-            prevGroup
-              ? {
-                  ...prevGroup,
-                  members: [
-                    ...prevGroup.members,
-                    {
-                      memberId: userId,
-                      memberType: userType,
-                      joinDate: serverTimestamp(),
-                    },
-                  ],
-                  groupSize: prevGroup.groupSize * 1 + 1, // Increment group size
-                }
-              : prevGroup
-          );
-        }
       }
     } catch (error) {
       console.error("Error joining group: ", error);
     }
   };
 
+  // Handle viewing group details
   const handleViewMore = (group: StudyGroup) => {
     if (group.groupType === "Public") {
-      return navigate(`/group/${group.id}`);
-    }
-    if (!group.members.some((member) => member.memberId === user?.uid)) {
+      navigate(`/group/${group.id}`);
+    } else if (!group.members.some((member) => member.memberId === user?.uid)) {
       setSelectedGroup(group);
     } else {
       navigate(`/group/${group.id}`);
     }
+  };
+
+  // Check if the user has requested to join a group
+  const hasRequestedToJoin = (groupId: string) => {
+    if (!user) return false;
+    return (
+      selectedGroup?.joinRequests.some(
+        (request) => request.userId === user.uid
+      ) ||
+      groups
+        .find((group) => group.id === groupId)
+        ?.joinRequests.some((request) => request.userId === user.uid)
+    );
   };
 
   return (
@@ -151,17 +162,23 @@ const Groups = () => {
               >
                 View group
               </button>
-              {group.members.length === 0 ||
-                (!group.members.some(
-                  (member) => member.memberId === user?.uid
-                ) && (
-                  <button
-                    onClick={() => group.id && handleJoinGroup(group.id)}
-                    className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
-                  >
-                    Join
-                  </button>
-                ))}
+              {!group.members.some(
+                (member) => member.memberId === user?.uid
+              ) && (
+                <button
+                  disabled={!!(group.id && hasRequestedToJoin(group.id))}
+                  onClick={() =>
+                    group.id && handleJoinGroup(group.id, group.groupType)
+                  }
+                  className="bg-yellow-600 disabled:bg-gray-400 text-white font-semibold uppercase text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
+                >
+                  {group.groupType === "Public"
+                    ? "Join"
+                    : group.id && hasRequestedToJoin(group.id)
+                    ? "Request Sent"
+                    : "Request To Join"}
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -174,85 +191,20 @@ const Groups = () => {
         </div>
       )}
 
-      {/* Popup for Group Details */}
+      {/* Group Details Modal */}
       {selectedGroup && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border border-yellow-600 rounded-lg p-6 shadow-2xl w-11/12 max-w-md max-h-[80vh] overflow-y-auto">
-          {/* Group Image and Join Button */}
-          <div className="flex items-center justify-between mb-4">
-            {/* Group Image */}
-            <div className="flex justify-center flex-1">
-              <img
-                src={"https://picsum.photos/200"} // Use a dummy image if groupImage is not provided
-                alt={selectedGroup.name}
-                className="w-24 h-24 rounded-full object-cover"
-              />
-            </div>
-
-            {/* Join Button */}
-            {!selectedGroup.members.some(
-              (member) => member.memberId === user?.uid
-            ) && (
-              <button
-                onClick={() =>
-                  selectedGroup.id && handleJoinGroup(selectedGroup.id)
-                }
-                className="bg-yellow-600 text-white font-semibold uppercase text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
-              >
-                Join
-              </button>
-            )}
-          </div>
-
-          {/* Group Name */}
-          <h2 className="text-2xl font-semibold text-yellow-600 text-center">
-            {selectedGroup.name} ({selectedGroup.members.length})
-          </h2>
-
-          {/* Description */}
-          <p className="text-gray-700 mt-2 ">{selectedGroup.description}</p>
-
-          {/* Category and Group Type */}
-          <div className="flex text-sm justify-between uppercase text-yellow-600 my-2 font-bold">
-            <p>{selectedGroup.category}</p>
-            <p>{selectedGroup.groupType}</p>
-          </div>
-
-          {/* Rules */}
-          <div className="text-gray-600 mt-3">
-            <span className="font-semibold underline">Rules</span>
-            <ul>
-              {selectedGroup.rules.map((rule, index) => (
-                <li className="list-none my-1" key={index}>
-                  {rule}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Tags */}
-          <div className="text-gray-600 mt-2">
-            <div className="flex flex-wrap gap-2 mt-1">
-              {selectedGroup.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="bg-yellow-600 text-white px-2 py-1 rounded text-sm"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Close Button */}
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => setSelectedGroup(null)}
-              className="bg-gray-200 text-black px-4 py-2 rounded hover:bg-gray-300 transition"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <GroupDetailsModal
+          group={selectedGroup}
+          user={user}
+          onClose={() => setSelectedGroup(null)}
+          onJoinGroup={() =>
+            selectedGroup.id &&
+            handleJoinGroup(selectedGroup.id, selectedGroup.groupType)
+          }
+          hasRequestedToJoin={
+            !!(selectedGroup.id && hasRequestedToJoin(selectedGroup.id))
+          }
+        />
       )}
     </div>
   );
