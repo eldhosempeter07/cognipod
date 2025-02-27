@@ -8,9 +8,14 @@ import { Post } from "@/util/types";
 interface CreatePostProps {
   groupId: string;
   handlePost: (post: Post) => void;
+  type: string;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ groupId, handlePost }) => {
+const CreatePost: React.FC<CreatePostProps> = ({
+  groupId,
+  handlePost,
+  type,
+}) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -31,20 +36,25 @@ const CreatePost: React.FC<CreatePostProps> = ({ groupId, handlePost }) => {
 
     try {
       let fileDetails = null;
+      let fileRef = null;
+      let path = null;
       if (file) {
         // Upload the file and get its details
-        const fileRef = ref(
-          storage,
-          `studyGroups/${groupId}/files/${file.name}`
-        );
+        if (type === "user") {
+          fileRef = ref(storage, `user/${user.uid}/files/${file.name}`);
 
-        console.log(fileRef);
+          path = `user/${user.uid}/files/${file.name}`;
+        } else {
+          path = `studyGroups/${groupId}/files/${file.name}`;
+
+          fileRef = ref(storage, `studyGroups/${groupId}/files/${file.name}`);
+        }
 
         await uploadBytes(fileRef, file);
         fileDetails = {
           name: file.name,
           url: await getDownloadURL(fileRef),
-          path: `studyGroups/${groupId}/files/${file.name}`,
+          path: path,
         };
       }
 
@@ -55,7 +65,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ groupId, handlePost }) => {
         uploadedBy: user.uid,
       };
 
-      // Create the post in Firestore
       handlePost(post);
 
       // Reset the form

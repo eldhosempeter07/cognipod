@@ -1,5 +1,6 @@
 import React from "react";
-import { StudyGroup, User } from "../util/types";
+import { StudyGroup } from "../util/types";
+import { User } from "firebase/auth";
 
 interface GroupDetailsModalProps {
   group: StudyGroup;
@@ -24,7 +25,7 @@ const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           alt={group.name}
           className="w-24 h-24 rounded-full object-cover"
         />
-        {!group.members.some((member) => member.memberId === user?.id) && (
+        {!group.members.some((member) => member.memberId === user?.uid) && (
           <button
             disabled={hasRequestedToJoin}
             onClick={onJoinGroup}

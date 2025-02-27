@@ -13,6 +13,8 @@ const Groups = () => {
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [lastVisible, setLastVisible] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [groupSizeError, setGroupSizeError] = useState<string[]>([]);
+
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
   const { user } = useContext(AuthContext) ?? { user: null };
   const navigate = useNavigate();
@@ -60,20 +62,28 @@ const Groups = () => {
   }, [lastVisible]);
 
   // Handle joining a group
-  const handleJoinGroup = async (groupId: string, type: string) => {
-    if (!user?.uid) return;
+  const handleJoinGroup = async (group: StudyGroup) => {
+    const { id, groupType, groupSize, members } = group;
 
+    if (members.length == groupSize && id) {
+      return setGroupSizeError((prev) => [...prev, id]);
+    }
+    if (!user?.uid) return;
     try {
-      if (type === "Private") {
-        await addJoinRequest(groupId, user.uid, "member");
+      if (groupType === "Private") {
+        id && (await addJoinRequest(id, user.uid, "member"));
       } else {
-        await joinStudyGroup({ groupId, userId: user.uid, userType: "member" });
+        id &&
+          (await joinStudyGroup({
+            groupId: id,
+            userId: user.uid,
+            userType: "member",
+          }));
       }
 
-      // Update local state
       setGroups((prevGroups) =>
         prevGroups.map((group) =>
-          group.id === groupId
+          group.id === id
             ? {
                 ...group,
                 members: [
@@ -90,8 +100,7 @@ const Groups = () => {
         )
       );
 
-      // Update selected group if it's the one being joined
-      if (selectedGroup?.id === groupId) {
+      if (selectedGroup?.id === id) {
         setSelectedGroup((prevGroup) =>
           prevGroup
             ? {
@@ -154,7 +163,9 @@ const Groups = () => {
             </h2>
             <p className="text-gray-700 mt-2">{group.description}</p>
             <p className="text-gray-600 mt-1">Category: {group.category}</p>
-            <p className="text-gray-600 mt-1">Members: {group.groupSize}</p>
+            <p className="text-gray-600 mt-1">
+              Members: {group.members.length}{" "}
+            </p>
             <div className="mt-4 space-x-2">
               <button
                 onClick={() => handleViewMore(group)}
@@ -167,10 +178,8 @@ const Groups = () => {
               ) && (
                 <button
                   disabled={!!(group.id && hasRequestedToJoin(group.id))}
-                  onClick={() =>
-                    group.id && handleJoinGroup(group.id, group.groupType)
-                  }
-                  className="bg-yellow-600 disabled:bg-gray-400 text-white font-semibold uppercase text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
+                  onClick={() => group.id && handleJoinGroup(group)}
+                  className="bg-yellow-600 disabled:bg-gray-400 text-white font-semibold  text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
                 >
                   {group.groupType === "Public"
                     ? "Join"
@@ -180,6 +189,11 @@ const Groups = () => {
                 </button>
               )}
             </div>
+            {group.id && groupSizeError.includes(group.id) ? (
+              <span className="text-red-500 font-semibold ">
+                Group is already full
+              </span>
+            ) : null}
           </div>
         ))}
       </div>
@@ -197,10 +211,7 @@ const Groups = () => {
           group={selectedGroup}
           user={user}
           onClose={() => setSelectedGroup(null)}
-          onJoinGroup={() =>
-            selectedGroup.id &&
-            handleJoinGroup(selectedGroup.id, selectedGroup.groupType)
-          }
+          onJoinGroup={() => selectedGroup.id && handleJoinGroup(selectedGroup)}
           hasRequestedToJoin={
             !!(selectedGroup.id && hasRequestedToJoin(selectedGroup.id))
           }

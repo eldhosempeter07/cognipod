@@ -19,7 +19,7 @@ const PostDetail = () => {
     loading: true,
   };
 
-  const { groupId, postId } = useParams(); // Get groupId and postId from the URL
+  const { type, groupId, postId } = useParams();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[] | []>([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +28,8 @@ const PostDetail = () => {
   const [commentAdded, setCommentAdded] = useState(false);
 
   const loadPost = async () => {
-    if (!groupId || !postId) return;
-    const postData = await fetchPost(groupId, postId);
+    if (!groupId || !postId || !type) return;
+    const postData = await fetchPost(type, groupId, postId);
     setPost(postData);
     setLoading(false);
   };
@@ -40,10 +40,10 @@ const PostDetail = () => {
   }, [groupId, postId]);
 
   const getComments = async () => {
-    if (!groupId || !postId) return;
+    if (!groupId || !postId || !type) return;
 
     setCommentLoading(true);
-    const commentData = await fetchComments(groupId, postId);
+    const commentData = await fetchComments(type, groupId, postId);
     setComments(commentData);
     setCommentLoading(false);
   };
@@ -74,27 +74,26 @@ const PostDetail = () => {
 
   const handleComment = async (comment: string) => {
     setCommentAdded(false);
-    if (groupId && postId)
+    if (groupId && postId && type)
       if (user?.uid) {
-        await addCommentToPost(groupId, postId, user.uid, comment);
+        await addCommentToPost(type, groupId, postId, user.uid, comment);
         setCommentAdded(true);
       }
   };
 
   const handlePostLike = async () => {
     setlikeAdded(false);
-    if (groupId && user && postId)
-      await toggleLikePost(groupId, postId, user.uid);
+    if (groupId && user && type && postId)
+      await toggleLikePost(type, groupId, postId, user.uid);
     setlikeAdded(true);
   };
 
   return (
     <div className="p-6 max-w-2xl mx-auto mt-16">
-      {/* Post Content */}
       <div className="bg-white p-6 rounded-lg shadow-md">
         <li className="text-black mb-2 flex items-center">
           <img
-            src={profile}
+            src={post.imageUrl || profile}
             alt="profile"
             className="w-10 h-10 rounded-full mr-3"
           />
@@ -122,7 +121,7 @@ const PostDetail = () => {
             <div key={comment.id} className="bg-gray-50 p-4 rounded-lg">
               <li className="text-black mb-2 flex">
                 <img
-                  src={profile}
+                  src={comment.imageUrl || profile}
                   alt="profile"
                   className="w-10 h-10 rounded-full mr-3 mt-1"
                 />

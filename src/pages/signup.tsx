@@ -33,19 +33,18 @@ const getValidationSchema = (isLogin: boolean) =>
   });
 
 export default function SignUpPage() {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and signup
-  const [error, setError] = useState(""); // Error message
-  const [loading, setLoading] = useState(false); // Loading state
-  const navigate = useNavigate(); // For navigation
+  const [isLogin, setIsLogin] = useState(true);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Formik setup
   const formik = useFormik<Inputs>({
     initialValues: {
       name: "",
       email: "",
       password: "",
     },
-    validationSchema: getValidationSchema(isLogin), // Dynamically apply validation
+    validationSchema: getValidationSchema(isLogin),
     validateOnChange: true,
     validateOnBlur: true,
     onSubmit: async (values) => {
@@ -53,7 +52,6 @@ export default function SignUpPage() {
       setLoading(true);
       try {
         if (isLogin) {
-          // Login with email and password
           const userResponse: UserCredential = await signInWithEmailAndPassword(
             auth,
             values.email,
@@ -66,7 +64,6 @@ export default function SignUpPage() {
             });
           }
         } else {
-          // Sign up with email and password
           const userResponse: UserCredential =
             await createUserWithEmailAndPassword(
               auth,
@@ -83,16 +80,33 @@ export default function SignUpPage() {
           }
         }
 
-        // Redirect to home page
         navigate("/");
       } catch (err) {
         if (err instanceof Error) {
-          setError(err.message); // Handle Firebase errors
+          console.log(
+            err.message.includes("Firebase: Error (auth/invalid-credential)")
+          );
+
+          if (
+            err.message.includes("Firebase: Error (auth/invalid-credential)")
+          ) {
+            return setError("Incorrect Username or Password");
+          }
+          if (
+            err.message.includes(
+              "Firebase: Error (auth/popup-closed-by-user)."
+            ) ||
+            err.message.includes(
+              "Firebase: Error (auth/cancelled-popup-request)."
+            )
+          )
+            return;
+          setError(err.message);
         } else {
-          setError("An unknown error occurred."); // Handle unknown errors
+          setError("An unknown error occurred.");
         }
       } finally {
-        setLoading(false); // Reset loading state
+        setLoading(false);
       }
     },
   });
@@ -207,7 +221,7 @@ export default function SignUpPage() {
             className="w-full bg-gray-900 text-white px-4 py-3 rounded-lg hover:bg-yellow-600 transition duration-300 font-medium"
             disabled={loading}
           >
-            {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
+            {loading ? "Login..." : isLogin ? "Login" : "Sign Up"}
           </button>
         </form>
 

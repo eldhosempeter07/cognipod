@@ -4,11 +4,41 @@ import {
   updateUserProfile,
   uploadProfileImage,
 } from "../util/firebase/firebaseServices";
-import { auth } from "../util/firebase/firebase";
+import { auth, db } from "../util/firebase/firebase";
 import profileImg from "../util/images/profile.jpg";
+import FriendsList from "../components/FriendsList";
+import SuggestionsList from "../components/SuggestionsList";
+import {
+  acceptFriendRequest,
+  fetchFriends,
+  fetchSuggestions,
+  getReceivedRequests,
+  rejectFriendRequest,
+  removeFriend,
+} from "../util/firebase/services/friends";
+import FriendRequests from "../components/recievedRequests";
+import { User } from "@/util/types";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "@firebase/firestore";
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  college: string;
+  phone: string;
+  imageUrl: string;
+  path: string;
+}
 
 const Profile = () => {
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<UserProfile>({
+    id: "",
     name: "",
     email: "",
     college: "",
@@ -16,42 +46,132 @@ const Profile = () => {
     imageUrl: "",
     path: "",
   });
+  const [friends, setFriends] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const userId = auth.currentUser?.uid;
 
-  // Fetch profile data on component mount
+  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (userId) {
+      getReceivedRequests(userId).then(setReceivedRequests);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (userId) {
       setLoading(true);
-      fetchUserProfile(userId)
-        .then((data) => {
+      Promise.all([
+        fetchUserProfile(userId),
+        fetchFriends(userId),
+        fetchSuggestions(userId),
+      ])
+        .then(([profileData, friendsData, suggestionsData]) => {
           setProfile({
-            name: data.name || "",
-            email: data.email || "",
-            college: data.college || "",
-            phone: data.phone || "",
-            imageUrl: data.imageUrl || "",
-            path: data.path || "",
+            id: userId,
+            name: profileData.name || "",
+            email: profileData.email || "",
+            college: profileData.college || "",
+            phone: profileData.phone || "",
+            imageUrl: profileData.imageUrl || "",
+            path: profileData.path || "",
           });
+          setFriends(friendsData);
+          setSuggestions(suggestionsData);
           setLoading(false);
         })
         .catch((err) => {
-          setError("Failed to fetch profile data.");
+          setError("Failed to load data");
           setLoading(false);
           console.error(err);
         });
     }
   }, [userId]);
 
-  // Handle input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
+  const handleAddFriend = async (friend: User) => {
+    try {
+      if (!userId || !friend.id) return;
+
+      const { id, name } = friend;
+
+      await acceptFriendRequest(userId, id);
+
+      try {
+        const notification = {
+          authorId: userId,
+          timestamp: serverTimestamp(),
+          link: null,
+          message: `${name} accepted your friend request`,
+          read: false,
+        };
+
+        const notifRef = collection(db, "users", id, "notifications");
+        await addDoc(notifRef, notification);
+      } catch (error) {
+        console.log(error);
+      }
+
+      setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
+
+      setFriends((prevFriends) => {
+        const newFriend = receivedRequests.find((user) => user.id === id);
+        return newFriend ? [...prevFriends, newFriend] : prevFriends;
+      });
+    } catch (error) {
+      console.error("Failed to add friend:", error);
+    }
   };
 
-  // Handle image upload
+  const handleRejectFriendRequest = async (friend: User) => {
+    try {
+      if (!userId || !friend.id) return;
+
+      const { id, name } = friend;
+
+      await rejectFriendRequest(id, userId);
+
+      try {
+        const notification = {
+          authorId: userId,
+          timestamp: serverTimestamp(),
+          link: null,
+          message: `${name} rejected your friend request`,
+          read: false,
+        };
+
+        const notifRef = collection(db, "users", id, "notifications");
+        await addDoc(notifRef, notification);
+      } catch (error) {
+        console.log(error);
+      }
+
+      setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
+
+      setSuggestions((prevFriends) => {
+        const newFriend = suggestions.find((user) => user.id === id);
+        return newFriend ? [...prevFriends, newFriend] : prevFriends;
+      });
+    } catch (error) {
+      console.error("Failed to add friend:", error);
+    }
+  };
+
+  const handleRemoveFriend = async (friendId: string) => {
+    try {
+      if (!userId) return;
+
+      await removeFriend(userId, friendId);
+      setFriends((prev) => prev.filter((user) => user.id !== friendId));
+      const removedFriend = friends.find((user) => user.id === friendId);
+      if (removedFriend) setSuggestions((prev) => [...prev, removedFriend]);
+    } catch (error) {
+      console.error("Failed to remove friend:", error);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && userId) {
       const file: File = e.target.files[0];
@@ -70,7 +190,11 @@ const Profile = () => {
     }
   };
 
-  // Handle form submission
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfile((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userId) {
@@ -87,115 +211,147 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Profile</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Profile Image */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Profile Image
-          </label>
-          <div className="flex items-center space-x-4">
-            <img
-              src={profile.imageUrl || profileImg}
-              alt="Profile"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="text-sm"
-            />
+    <div className="container mx-auto p-6 mt-16">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Profile Section */}
+        <div className="lg:col-span-3">
+          <div className="bg-white p-6 rounded-lg shadow-md sticky top-6">
+            <h2 className="text-2xl font-bold mb-6">Profile</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Profile Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Profile Image
+                </label>
+                <div className="flex items-center space-x-4">
+                  <img
+                    src={profile.imageUrl || profileImg}
+                    alt="Profile"
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Name */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={profile.name}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={profile.email}
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                />
+              </div>
+
+              {/* College */}
+              <div>
+                <label
+                  htmlFor="college"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  College
+                </label>
+                <input
+                  type="text"
+                  id="college"
+                  name="college"
+                  value={profile.college}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={profile.phone}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition duration-300 disabled:bg-blue-300"
+              >
+                {loading ? "Updating..." : "Update Profile"}
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* Name */}
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Name
-          </label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={profile.name}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
+        {/* Right Social Section */}
+        <div className="lg:col-span-1">
+          <FriendsList
+            users={friends}
+            limit={5}
+            showViewAll
+            onRemoveFriend={handleRemoveFriend}
+            setFriends={setFriends}
+          />
+
+          <FriendRequests
+            users={receivedRequests}
+            limit={5}
+            showViewAll
+            onAddFriend={handleAddFriend}
+            onRejectRequest={handleRejectFriendRequest}
+            setRequests={setReceivedRequests}
+          />
+
+          <SuggestionsList
+            users={suggestions}
+            limit={5}
+            showViewAll
+            // onAddFriend={handleAddFriend}
+            setSuggestion={setSuggestions}
           />
         </div>
-
-        {/* Email */}
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={profile.email}
-            disabled
-            className="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
-          />
-        </div>
-
-        {/* College */}
-        <div>
-          <label
-            htmlFor="college"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            College
-          </label>
-          <input
-            type="text"
-            id="college"
-            name="college"
-            value={profile.college}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Phone */}
-        <div>
-          <label
-            htmlFor="phone"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Phone
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={profile.phone}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition duration-300 disabled:bg-blue-300"
-        >
-          {loading ? "Updating..." : "Update Profile"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 };

@@ -10,10 +10,6 @@ const Header = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
-  const handleLogout = () => {
-    auth.signOut();
-    navigate("/");
-  };
 
   return (
     <header className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
@@ -115,12 +111,13 @@ const Header = () => {
                 ) : null}
               </div>
 
-              <button
-                onClick={handleLogout}
+              <a
+                href="/"
+                onClick={() => auth.signOut()}
                 className="text-gray-700 hover:text-yellow-500 transition-colors duration-200"
               >
                 Logout
-              </button>
+              </a>
               {user.uid && <NotificationIcon userId={user.uid} />}
             </>
           ) : (

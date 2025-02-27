@@ -48,7 +48,7 @@ export interface EditStudyGroup {
 export interface User {
   id?: string;
   name?: string;
-  email: string | null;
+  email?: string;
   path?: string;
   imageUrl?: string;
 }
@@ -106,6 +106,10 @@ export interface Post {
   userName?: string;
   likes?: string[];
   comments?: Comment[];
+  type?: "user" | "group";
+  groupId?: string;
+  userId?: string;
+  imageUrl?: string;
 }
 
 export interface Comment {
@@ -114,6 +118,7 @@ export interface Comment {
   userId: string;
   createdAt?: Timestamp | FieldValue;
   userName?: string;
+  imageUrl?: string;
 }
 
 export interface SessionData {
@@ -146,8 +151,10 @@ export interface PostData {
   authorId: string;
   postAuthorName: string;
   members: Member[];
-  groupId?: string; // Optional if posts can be outside a group
-  groupName: string; // Optional if posts can be outside a group
-  timestamp: any; // Firestore timestamp
+  groupId?: string;
+  userId?: string;
+  groupName: string;
+  timestamp: any;
   link: string;
+  uploadedBy: string;
 }

@@ -12,7 +12,7 @@ import {
   addJoinRequest,
   joinStudyGroup,
 } from "../util/firebase/services/group";
-import { serverTimestamp } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { Message, Post, StudyGroup } from "../util/types";
 import { AuthContext } from "../util/context/authContext";
 import CreatePost from "../components/createPost";
@@ -21,7 +21,7 @@ import CreatePostModal from "../components/CreatePostModal";
 import Chat from "../components/chat";
 import profile from "../util/images/profile.jpg";
 import Popup from "../components/popup";
-import { triggerGroupPostNotification } from "../util/firebase/firebaseServices";
+import { db } from "../util/firebase/firebase";
 
 const GroupDetailsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -118,8 +118,8 @@ const GroupDetailsPage = () => {
       setIsModalOpen(false);
       setPostAdded(true);
 
-      if (memberName) {
-        await triggerGroupPostNotification({
+      try {
+        const notification = {
           authorId: user?.uid,
           groupId: group.id,
           postAuthorName: memberName,
@@ -128,15 +128,29 @@ const GroupDetailsPage = () => {
           members: group.members,
           link: `/${groupId}/post/${id}`,
           groupName: group.name,
+        };
+
+        group.members.forEach(async (member) => {
+          if (member.memberId === user.uid) return;
+          const notifRef = doc(
+            db,
+            "users",
+            member.memberId,
+            "notifications",
+            id
+          );
+          await setDoc(notifRef, notification);
         });
+      } catch (error) {
+        console.log(error);
       }
     }
   };
 
-  const handlePostLike = async (postId: string) => {
+  const handlePostLike = async (type: "user" | "group", postId: string) => {
     setlikeAdded(false);
     if (groupId && user) {
-      await toggleLikePost(groupId, postId, user.uid);
+      await toggleLikePost(type, groupId, postId, user.uid);
       setlikeAdded(true);
     }
   };
@@ -151,10 +165,8 @@ const GroupDetailsPage = () => {
   const handleGroupImageUpdate = async (file: File) => {
     if (!groupId || !user || !group?.groupAdmin.includes(user.uid)) return;
 
-    // Upload image to Firebase Storage
     const imageUrl = await uploadGroupImage(groupId, file);
 
-    // Update group in Firestore
     await updateGroupImage(groupId, imageUrl);
     setGroup({ ...group, groupImage: imageUrl });
   };
@@ -177,13 +189,11 @@ const GroupDetailsPage = () => {
     }
   };
 
-  // Check if the user is a member of the group
   const isUserMember =
     user && group.members.some((member) => member.memberId === user.uid);
 
   return (
     <div className="bg-white text-yellow-500 min-h-screen px-10 mb-10 pt-6 mt-12">
-      {/* Group Image */}
       <div className="w-full h-64 overflow-hidden relative">
         {group.groupImage && (
           <img
@@ -192,7 +202,6 @@ const GroupDetailsPage = () => {
             className="w-full h-full object-cover"
           />
         )}
-        {/* Edit Photo Button (Admin Only) */}
         {user?.uid && group.groupAdmin.includes(user.uid) && (
           <label className="absolute bottom-2 right-2 bg-black/50 text-white px-3 py-1 rounded cursor-pointer hover:bg-black/70">
             Edit Photo
@@ -274,7 +283,11 @@ const GroupDetailsPage = () => {
                   isOpen={isModalOpen}
                   onClose={() => setIsModalOpen(false)}
                 >
-                  <CreatePost groupId={groupId} handlePost={handlePost} />
+                  <CreatePost
+                    groupId={groupId}
+                    handlePost={handlePost}
+                    type="group"
+                  />
                 </CreatePostModal>
               )}
             </div>
@@ -329,7 +342,7 @@ const GroupDetailsPage = () => {
           </div>
         </div>
       ) : (
-        <div className="text-center py-10">
+        <div className="text-left mt-3">
           <button
             disabled={
               user &&

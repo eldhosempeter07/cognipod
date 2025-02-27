@@ -38,14 +38,14 @@ const Home = () => {
           </p>
         </section>
 
-        {/* Search Bar */}
+        {/* Search Bar
         <div className="mb-4 sm:mb-8">
           <input
             type="text"
             placeholder="Search study groups by topic, subject, or tags..."
             className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
           />
-        </div>
+        </div> */}
 
         {/* Create Group and Join Group Buttons (only for logged-in users) */}
         {user && (

@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 interface PostFeedProps {
   postLoading: boolean;
   posts: Post[];
-  handlePostLike: (postId: string) => void;
+  handlePostLike: (type: "user" | "group", postId: string) => void;
   groupId: string;
 }
 
@@ -53,7 +53,9 @@ const PostFeed: React.FC<PostFeedProps> = ({
           <div className="flex space-x-4 text-gray-600">
             <button
               className="flex items-center space-x-2 hover:text-yellow-500 transition-colors duration-200"
-              onClick={() => post.id && handlePostLike(post.id)}
+              onClick={() =>
+                post.type && post.id && handlePostLike(post.type, post.id)
+              }
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

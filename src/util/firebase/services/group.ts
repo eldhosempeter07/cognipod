@@ -15,6 +15,7 @@ import {
   arrayRemove,
   Timestamp,
   deleteDoc,
+  setDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, getStorage } from "firebase/storage";
 import { db, storage } from "../firebase";
@@ -139,7 +140,6 @@ const fetchUserDetails = async (id: string) => {
 };
 
 const enrichMembers = async (members: Member[]) => {
-  console.log("hi");
   if (members.length === 0) return;
   console.log(members);
 
@@ -343,125 +343,85 @@ export const getPosts = async (groupId: string): Promise<Post[]> => {
   return postsWithUserDetails as Post[];
 };
 
-export const toggleLikePost = async (
-  groupId: string,
-  postId: string,
-  userId: string
-) => {
-  const postRef = doc(db, `studyGroups/${groupId}/posts/${postId}`);
-
-  try {
-    const postSnapshot = await getDoc(postRef);
-    const postData = postSnapshot.data();
-
-    if (postData && postData.likes && postData.likes.includes(userId)) {
-      // User already liked the post, so remove their like
-      await updateDoc(postRef, {
-        likes: arrayRemove(userId),
-      });
-      console.log("Like removed");
-    } else {
-      // User hasn't liked the post, so add their like
-      await updateDoc(postRef, {
-        likes: arrayUnion(userId),
-      });
-      console.log("Like added");
-    }
-  } catch (error) {
-    console.error("Error toggling like: ", error);
-  }
-};
-
-export const addCommentToPost = async (
-  groupId: string,
-  postId: string,
-  userId: string,
-  text: string
-) => {
-  const commentsRef = collection(
-    db,
-    `studyGroups/${groupId}/posts/${postId}/comments`
-  );
-
-  try {
-    await addDoc(commentsRef, {
-      userId,
-      text,
-      createdAt: serverTimestamp(),
-    });
-    console.log("Comment added successfully");
-  } catch (error) {
-    console.error("Error adding comment: ", error);
-  }
-};
-
 export const fetchPost = async (
-  groupId: string,
+  type: string,
+  parentId: string,
   postId: string
 ): Promise<Post | null> => {
-  const postRef = doc(db, `studyGroups/${groupId}/posts/${postId}`);
+  const postRef =
+    type === "user"
+      ? doc(db, `users/${parentId}/posts/${postId}`)
+      : doc(db, `studyGroups/${parentId}/posts/${postId}`);
+
   const postSnapshot = await getDoc(postRef);
 
-  if (postSnapshot.exists()) {
-    const postData = postSnapshot.data();
-
-    // Fetch user details
-    const userRef = doc(db, "users", postData.uploadedBy);
-    const userDoc = await getDoc(userRef);
-
-    let userName = "";
-    let userEmail = "";
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      userName = userData.name || "";
-      userEmail = userData.email || "";
-    }
-
-    return {
-      id: postSnapshot.id,
-      ...postData,
-      userName,
-      userEmail,
-    } as Post;
-  } else {
+  if (!postSnapshot.exists()) {
     console.log("Post not found");
     return null;
   }
+
+  const postData = postSnapshot.data();
+
+  // ✅ Fetch User Info
+  const userRef = doc(db, "users", postData.uploadedBy);
+  const userDoc = await getDoc(userRef);
+
+  let userName = "Unknown";
+  let userEmail = "";
+  let imageUrl = null;
+
+  if (userDoc.exists()) {
+    const userData = userDoc.data();
+    userName = userData.name || "Unknown";
+    userEmail = userData.email || "";
+    imageUrl = userData.imageUrl || null;
+  }
+
+  return {
+    id: postSnapshot.id,
+    ...postData,
+    userName,
+    userEmail,
+    type,
+    imageUrl,
+  } as Post;
 };
 
 export const fetchComments = async (
-  groupId: string,
+  type: string,
+  parentId: string,
   postId: string
 ): Promise<Comment[]> => {
-  const commentsRef = collection(
-    db,
-    `studyGroups/${groupId}/posts/${postId}/comments`
-  );
-  const q = query(commentsRef, orderBy("createdAt", "desc")); // Order comments by date (newest first)
+  const commentsRef =
+    type === "user"
+      ? collection(db, `users/${parentId}/posts/${postId}/comments`)
+      : collection(db, `studyGroups/${parentId}/posts/${postId}/comments`);
+
+  const q = query(commentsRef, orderBy("createdAt", "desc"));
 
   try {
     const querySnapshot = await getDocs(q);
 
-    // Map through each comment and fetch user details
     const commentsData = await Promise.all(
       querySnapshot.docs.map(async (commentDoc) => {
         const commentData = commentDoc.data();
 
-        // Fetch user details
         const userRef = doc(db, "users", commentData.userId);
         const userDoc = await getDoc(userRef);
 
-        let userName = "";
+        let userName = "Unknown";
+        let imageUrl = null;
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
           userName = userData.name || "Unknown User";
+          imageUrl = userData.imageUrl;
         }
 
         return {
           id: commentDoc.id,
           userName,
+          imageUrl,
           text: commentData.text || "",
           userId: commentData.userId || "",
           createdAt: commentData.createdAt as Timestamp,
@@ -473,6 +433,67 @@ export const fetchComments = async (
   } catch (error) {
     console.error("Error fetching comments: ", error);
     return [];
+  }
+};
+
+export const addCommentToPost = async (
+  type: string,
+  parentId: string,
+  postId: string,
+  userId: string,
+  text: string
+) => {
+  try {
+    const commentRef =
+      type === "user"
+        ? doc(collection(db, `users/${parentId}/posts/${postId}/comments`))
+        : doc(
+            collection(db, `studyGroups/${parentId}/posts/${postId}/comments`)
+          );
+
+    await setDoc(commentRef, {
+      text,
+      userId,
+      createdAt: Timestamp.now(),
+    });
+
+    console.log("Comment added successfully!");
+  } catch (error) {
+    console.error("Error adding comment:", error);
+  }
+};
+
+export const toggleLikePost = async (
+  type: string,
+  parentId: string,
+  postId: string,
+  userId: string
+) => {
+  try {
+    const postRef =
+      type === "user"
+        ? doc(db, `users/${parentId}/posts/${postId}`)
+        : doc(db, `studyGroups/${parentId}/posts/${postId}`);
+
+    const postSnapshot = await getDoc(postRef);
+
+    if (!postSnapshot.exists()) {
+      console.log("Post not found");
+      return;
+    }
+
+    const postData = postSnapshot.data();
+    const likes = postData.likes || [];
+
+    if (likes.includes(userId)) {
+      await updateDoc(postRef, { likes: arrayRemove(userId) });
+      console.log("Like removed!");
+    } else {
+      await updateDoc(postRef, { likes: arrayUnion(userId) });
+      console.log("Like added!");
+    }
+  } catch (error) {
+    console.error("Error toggling like:", error);
   }
 };
 

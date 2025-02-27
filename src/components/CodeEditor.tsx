@@ -24,7 +24,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const [isModerator, setIsModerator] = useState<boolean>(false);
   const [isCollaborator, setIsCollaborator] = useState<boolean>(false);
 
-  // Subscribe to Firestore for real-time code updates
   useEffect(() => {
     if (!sessionId) return;
 
@@ -32,17 +31,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const unsubscribe = onSnapshot(sessionRef, (doc) => {
       if (doc.exists()) {
         const sessionData = doc.data();
-        console.log("Firestore update received:", sessionData); // Debugging
+        console.log("Firestore update received:", sessionData);
 
-        // Update the editor content if it has changed
         if (sessionData.code !== code) {
           setCode(sessionData.code || "");
         }
 
-        // Check if the current user is the moderator
         setIsModerator(sessionData.moderator === userId);
 
-        // Check if the current user is a collaborator
         setIsCollaborator(sessionData.collaborators?.includes(userId) || false);
       }
     });
@@ -50,7 +46,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => unsubscribe();
   }, [sessionId, userId]);
 
-  // Subscribe to Firestore for real-time output updates
   useEffect(() => {
     if (!sessionId) return;
 
@@ -59,7 +54,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       if (doc.exists()) {
         const sessionData = doc.data();
 
-        // Update the output if it has changed
         if (sessionData.codeOutput !== output) {
           setOutput(sessionData.codeOutput || "");
         }
@@ -71,75 +65,72 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // Handle editor changes
   const handleChange = (value: string | undefined) => {
-    if (value === undefined) return; // Handle undefined value
+    if (value === undefined) return;
 
-    // Only allow changes if the user is the moderator or a collaborator
     if (isModerator || isCollaborator) {
-      setCode(value); // Update local state
-      onCodeChange(value); // Notify parent component of the change
+      setCode(value);
+      onCodeChange(value);
 
-      // Update Firestore with the new code
       updateSessionCode(sessionId, value);
     }
   };
 
-  // Handle editor mount
   const handleEditorDidMount = (editor: Monaco) => {
     editorRef.current = editor; // Store the editor instance
   };
 
-  // Handle language change
   const handleLanguageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
-    setLanguage(event.target.value); // Update the selected language
+    setLanguage(event.target.value);
   };
 
   // Handle running the code
-  const handleRunCode = async () => {
-    try {
-      const response = await fetch("http://localhost:3001/run", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ code, language, sessionId }), // Include sessionId in the request
-      });
+  // const handleRunCode = async () => {
+  //   try {
+  //     const response = await fetch("http://localhost:3001/run", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ code, language, sessionId }), // Include sessionId in the request
+  //     });
 
-      const result = await response.json();
-      const outputText = result.output || result.error;
+  //     const result = await response.json();
+  //     const outputText = result.output || result.error;
 
-      // Update local state
-      setOutput(outputText);
+  //     // Update local state
+  //     setOutput(outputText);
 
-      // Update Firestore with the new output
-      const sessionRef = doc(db, "sessions", sessionId);
-      await updateDoc(sessionRef, {
-        codeOutput: outputText, // Store the output in Firestore
-      });
+  //     // Update Firestore with the new output
+  //     const sessionRef = doc(db, "sessions", sessionId);
+  //     await updateDoc(sessionRef, {
+  //       codeOutput: outputText, // Store the output in Firestore
+  //     });
 
-      console.log("Firestore updated with output:", outputText); // Debugging
-    } catch (error) {
-      const errorMessage = "Error executing code.";
-      setOutput(errorMessage);
+  //     console.log("Firestore updated with output:", outputText); // Debugging
+  //   } catch (error) {
+  //     const errorMessage = "Error executing code.";
+  //     setOutput(errorMessage);
 
-      // Update Firestore with the error message
-      const sessionRef = doc(db, "sessions", sessionId);
-      await updateDoc(sessionRef, {
-        codeOutput: errorMessage, // Store the error in Firestore
-      });
+  //     // Update Firestore with the error message
+  //     const sessionRef = doc(db, "sessions", sessionId);
+  //     await updateDoc(sessionRef, {
+  //       codeOutput: errorMessage, // Store the error in Firestore
+  //     });
 
-      console.log("Firestore updated with error:", errorMessage); // Debugging
-    }
-  };
+  //     console.log("Firestore updated with error:", errorMessage); // Debugging
+  //   }
+  // };
 
   // Request collaboration
+
   const requestCollaboration = async () => {
     const sessionRef = doc(db, "sessions", sessionId);
     await updateDoc(sessionRef, {
-      collaborators: arrayUnion(userId), // Add the user to the collaborators array
+      collaborators: arrayUnion(userId),
     });
-    setIsCollaborator(true); // Update local state
+    setIsCollaborator(true);
   };
 
   return (
@@ -154,11 +145,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             <option value="cpp">C++</option>
           </select>
         </label>
-        <button onClick={handleRunCode} style={{ marginLeft: "10px" }}>
+        {/* <button onClick={handleRunCode} style={{ marginLeft: "10px" }}>
           Run Code
-        </button>
+        </button> */}
 
-        {/* Request collaboration button */}
         {!isModerator && !isCollaborator && (
           <button onClick={requestCollaboration} style={{ marginLeft: "10px" }}>
             Request Collaboration
@@ -166,7 +156,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         )}
       </div>
 
-      {/* Code Editor */}
       <Editor
         height="70vh"
         language={language}
