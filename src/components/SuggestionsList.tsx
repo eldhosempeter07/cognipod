@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "@firebase/firestore";
+import profile from "../util/images/profile.png";
 
 interface SuggestionsListProps {
   limit?: number;
@@ -121,11 +122,11 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
             >
               <div className="flex items-center w-full">
                 <img
-                  src={user.imageUrl || "/default-avatar.png"}
+                  src={user.imageUrl || profile}
                   alt={user.name || "User"}
                   className="w-10 h-10 rounded-full mr-4"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/default-avatar.png";
+                    (e.target as HTMLImageElement).src = profile;
                   }}
                 />
                 <div className="flex-1">

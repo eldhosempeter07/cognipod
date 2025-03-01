@@ -24,7 +24,7 @@ export default function CreateGroupForm() {
     discussionThreads: [],
     rules: [],
     progressTracking: "",
-    groupSize: 0,
+    groupSize: 5,
     tags: [],
     groupImage: "",
     joinRequests: [],
@@ -45,27 +45,25 @@ export default function CreateGroupForm() {
       if (id !== undefined) {
         let imageUrl = "";
 
-        // Upload the image if a file is selected
         if (selectedFile) {
           imageUrl = await uploadGroupCoverImage(formData.name, selectedFile);
         }
 
         const groupData = {
           ...formData,
-          groupImage: imageUrl, // Update the groupImage field with the uploaded image URL
+          groupImage: imageUrl,
           createdBy: id,
           createdAt: serverTimestamp(),
           groupAdmin: [...formData.groupAdmin, id],
+          query_name: formData.name.toLowerCase(),
           members: [
             ...formData.members,
             { memberId: id, memberType: "Admin", joinDate: new Date() },
           ],
         };
 
-        // Add the new study group to Firebase
         await addStudyGroup(groupData);
 
-        // Redirect to the home page after successful creation
         navigate("/");
       }
     } catch (err) {
@@ -111,19 +109,17 @@ export default function CreateGroupForm() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]); // Store the selected file
+      setSelectedFile(e.target.files[0]);
     }
   };
+
+  console.log(formData.groupSize);
 
   return (
     <form
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg"
     >
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">
-        Create a New Study Group
-      </h1>
-
       {/* Group Name */}
       <div>
         <label
@@ -269,14 +265,16 @@ export default function CreateGroupForm() {
         >
           Group Size
         </label>
-        <input
-          type="number"
+        <select
           id="groupSize"
           name="groupSize"
           value={formData.groupSize}
           onChange={handleChange}
-          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none  transition-all"
-        />
+          className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none transition-all"
+        >
+          <option value="5">5</option>
+          <option value="10">10</option>
+        </select>
       </div>
 
       {/* Tags/Keywords */}

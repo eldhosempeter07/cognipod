@@ -1,24 +1,22 @@
 import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { auth, googleProvider } from "../util/firebase/firebase"; // Adjust the path to your Firebase config
+import { auth, googleProvider } from "../util/firebase/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   UserCredential,
 } from "firebase/auth";
-import { signUpUser } from "../util/firebase/firebaseServices"; // Adjust the path to your Firebase services
-import { useNavigate } from "react-router-dom"; // For navigation
+import { signUpUser } from "../util/firebase/firebaseServices";
+import { useNavigate } from "react-router-dom";
 
-// Define the form input types
 type Inputs = {
   name?: string;
   email: string;
   password: string;
 };
 
-// Function to generate validation schema based on login mode
 const getValidationSchema = (isLogin: boolean) =>
   Yup.object().shape({
     name: isLogin
@@ -27,9 +25,11 @@ const getValidationSchema = (isLogin: boolean) =>
     email: Yup.string()
       .email("Invalid email address")
       .required("Email is required"),
-    password: Yup.string()
-      .min(6, "Password must be at least 6 characters")
-      .required("Password is required"),
+    password: isLogin
+      ? Yup.string().notRequired()
+      : Yup.string()
+          .min(6, "Password must be at least 6 characters")
+          .required("Password is required"),
   });
 
 export default function SignUpPage() {
@@ -176,7 +176,7 @@ export default function SignUpPage() {
               Email
             </label>
             <input
-              type="email"
+              type="text"
               id="email"
               name="email"
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
@@ -218,7 +218,7 @@ export default function SignUpPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-gray-900 text-white px-4 py-3 rounded-lg hover:bg-yellow-600 transition duration-300 font-medium"
+            className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg hover:bg-gray-950 transition duration-300 font-medium"
             disabled={loading}
           >
             {loading ? "Login..." : isLogin ? "Login" : "Sign Up"}

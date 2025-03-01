@@ -1,5 +1,5 @@
 import React from "react";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 
 // Define the Member type
 interface Member {

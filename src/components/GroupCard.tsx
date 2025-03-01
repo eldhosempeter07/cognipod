@@ -17,7 +17,6 @@ const GroupCard: React.FC<GroupCardProps> = ({
   const isMember = group.members.some((member) => member.memberId === user?.id)
     ? true
     : false;
-  console.log(isMember);
 
   const hasRequested = group.joinRequests.some(
     (request) => request.userId === user?.id

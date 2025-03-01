@@ -31,7 +31,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const unsubscribe = onSnapshot(sessionRef, (doc) => {
       if (doc.exists()) {
         const sessionData = doc.data();
-        console.log("Firestore update received:", sessionData);
 
         if (sessionData.code !== code) {
           setCode(sessionData.code || "");
@@ -84,46 +83,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   ) => {
     setLanguage(event.target.value);
   };
-
-  // Handle running the code
-  // const handleRunCode = async () => {
-  //   try {
-  //     const response = await fetch("http://localhost:3001/run", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({ code, language, sessionId }), // Include sessionId in the request
-  //     });
-
-  //     const result = await response.json();
-  //     const outputText = result.output || result.error;
-
-  //     // Update local state
-  //     setOutput(outputText);
-
-  //     // Update Firestore with the new output
-  //     const sessionRef = doc(db, "sessions", sessionId);
-  //     await updateDoc(sessionRef, {
-  //       codeOutput: outputText, // Store the output in Firestore
-  //     });
-
-  //     console.log("Firestore updated with output:", outputText); // Debugging
-  //   } catch (error) {
-  //     const errorMessage = "Error executing code.";
-  //     setOutput(errorMessage);
-
-  //     // Update Firestore with the error message
-  //     const sessionRef = doc(db, "sessions", sessionId);
-  //     await updateDoc(sessionRef, {
-  //       codeOutput: errorMessage, // Store the error in Firestore
-  //     });
-
-  //     console.log("Firestore updated with error:", errorMessage); // Debugging
-  //   }
-  // };
-
-  // Request collaboration
 
   const requestCollaboration = async () => {
     const sessionRef = doc(db, "sessions", sessionId);

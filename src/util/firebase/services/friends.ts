@@ -219,7 +219,6 @@ export const acceptFriendRequest = async (
     });
 
     await batch.commit();
-    console.log("Friend request accepted successfully!");
   } catch (error) {
     console.error("Error accepting friend request:", error);
     throw error;

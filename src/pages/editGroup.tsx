@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { fetchGroupDetails, editGroup } from "../util/firebase/services/group";
 import { StudyGroup } from "../util/types";
 import { AuthContext } from "../util/context/authContext";
+import LoadingScreen from "../components/loadingScreen";
 
 const EditGroupPage = () => {
   const { groupId } = useParams();
@@ -59,7 +60,11 @@ const EditGroupPage = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <LoadingScreen />
+      </>
+    );
   }
 
   if (!group) {

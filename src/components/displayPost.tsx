@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getPosts } from "../util/firebase/services/group";
 import { Post } from "@/util/types";
 import PostImage from "./postImage";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 import { useNavigate } from "react-router-dom";
 
 interface PostFeedProps {

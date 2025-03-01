@@ -18,8 +18,6 @@ const SessionPasswordPopup: React.FC<SessionPasswordPopupProps> = ({
 
   const onConfirm = async () => {
     if (session.password) {
-      console.log(password, session.password);
-
       const isValidPassword = await decryptData(session.password, password);
       if (isValidPassword) {
         setError("");

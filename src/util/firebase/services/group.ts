@@ -10,14 +10,14 @@ import {
   getDocs,
   updateDoc,
   arrayUnion,
-  startAfter,
-  limit,
   arrayRemove,
   Timestamp,
   deleteDoc,
   setDoc,
+  where,
+  limit,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, getStorage } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../firebase";
 import {
   Comment,
@@ -31,28 +31,37 @@ import {
 } from "@/util/types";
 
 export const fetchStudyGroups = async (
-  lastVisible = null
-): Promise<{ groups: StudyGroup[]; lastVisible: any }> => {
+  page: number,
+  limitPerPage: number,
+  searchQuery?: string
+): Promise<{ groups: StudyGroup[]; totalCount: number }> => {
   try {
     let q;
-    if (lastVisible) {
-      // Fetch the next 3 groups after the last visible document
+
+    if (searchQuery) {
+      q = query(
+        collection(db, "studyGroups"),
+        where("query_name", ">=", searchQuery.replace(/\s+/g, "").trim()),
+        where(
+          "query_name",
+          "<=",
+          searchQuery.replace(/\s+/g, "").trim() + "\uf8ff"
+        ),
+        orderBy("query_name", "asc"),
+        limit(limitPerPage)
+      );
+    } else {
       q = query(
         collection(db, "studyGroups"),
         orderBy("createdAt", "asc"),
-        startAfter(lastVisible),
-        limit(3)
+        limit(limitPerPage)
       );
-    } else {
-      // Fetch the first 3 groups
-      q = query(collection(db, "studyGroups"), orderBy("createdAt"), limit(3));
     }
 
     const querySnapshot = await getDocs(q);
 
-    // If no documents are returned, return empty groups and null for lastVisible
     if (querySnapshot.empty) {
-      return { groups: [], lastVisible: null };
+      return { groups: [], totalCount: 0 };
     }
 
     const groups: StudyGroup[] = querySnapshot.docs.map((doc) => ({
@@ -81,18 +90,22 @@ export const fetchStudyGroups = async (
       groupStatus: doc.data().groupStatus || "",
       createdAt: doc.data().createdAt || null,
       createdBy: doc.data().createdBy || "",
+      query_name: doc.data().query_name || "",
     }));
+
+    const totalCountQuery = query(collection(db, "studyGroups"));
+    const totalCountSnapshot = await getDocs(totalCountQuery);
+    const totalCount = totalCountSnapshot.size;
 
     return {
       groups,
-      lastVisible: querySnapshot.docs[querySnapshot.docs.length - 1],
+      totalCount,
     };
   } catch (error) {
     console.error("Error fetching study groups: ", error);
     throw error;
   }
 };
-
 // Join a study group
 export const joinStudyGroup = async (user: JoinGroup) => {
   try {
@@ -113,8 +126,6 @@ export const joinStudyGroup = async (user: JoinGroup) => {
 
 const fetchUserDetails = async (id: string) => {
   try {
-    console.log("userId", id);
-
     if (!id) {
       throw new Error("User ID is undefined");
     }
@@ -141,7 +152,6 @@ const fetchUserDetails = async (id: string) => {
 
 const enrichMembers = async (members: Member[]) => {
   if (members.length === 0) return;
-  console.log(members);
 
   return Promise.all(
     members.map(async (member) => {
@@ -205,6 +215,7 @@ export const fetchGroupDetails = async (
     groupStatus: groupData.groupStatus || "",
     createdAt: groupData.createdAt || null,
     createdBy: groupData.createdBy || "",
+    query_name: groupData.query_name || "",
   };
 };
 
@@ -229,8 +240,6 @@ export const subscribeToMessages = (
       messagesList.map(async (message) => {
         const userRef = doc(db, "users", message.userId);
         const userDoc = await getDoc(userRef);
-        console.log(userDoc.exists());
-
         if (userDoc.exists()) {
           const userData = userDoc.data();
 
@@ -240,7 +249,6 @@ export const subscribeToMessages = (
             userEmail: userData.email || "", // Add email from user details
           };
         }
-        console.log(message);
 
         return message;
       })
@@ -356,7 +364,6 @@ export const fetchPost = async (
   const postSnapshot = await getDoc(postRef);
 
   if (!postSnapshot.exists()) {
-    console.log("Post not found");
     return null;
   }
 
@@ -456,8 +463,6 @@ export const addCommentToPost = async (
       userId,
       createdAt: Timestamp.now(),
     });
-
-    console.log("Comment added successfully!");
   } catch (error) {
     console.error("Error adding comment:", error);
   }
@@ -478,7 +483,6 @@ export const toggleLikePost = async (
     const postSnapshot = await getDoc(postRef);
 
     if (!postSnapshot.exists()) {
-      console.log("Post not found");
       return;
     }
 
@@ -487,10 +491,8 @@ export const toggleLikePost = async (
 
     if (likes.includes(userId)) {
       await updateDoc(postRef, { likes: arrayRemove(userId) });
-      console.log("Like removed!");
     } else {
       await updateDoc(postRef, { likes: arrayUnion(userId) });
-      console.log("Like added!");
     }
   } catch (error) {
     console.error("Error toggling like:", error);
@@ -501,13 +503,10 @@ export const getUserGroups = async (
   userId: string
 ): Promise<SessionGroupInputs[]> => {
   try {
-    console.log("Fetching groups for user:", userId);
-
     const studyGroupsRef = collection(db, "studyGroups");
     const querySnapshot = await getDocs(studyGroupsRef);
 
     const groups: SessionGroupInputs[] = [];
-    console.log("Total groups:", querySnapshot.size);
 
     querySnapshot.forEach((doc) => {
       const members = doc.data().members;
@@ -523,7 +522,6 @@ export const getUserGroups = async (
       }
     });
 
-    console.log("Number of groups user is a member of:", groups.length);
     return groups;
   } catch (error) {
     console.error("Error fetching user groups: ", error);
@@ -536,8 +534,6 @@ export const deleteGroup = async (groupId: string) => {
     const sessionRef = doc(db, "studyGroups", groupId);
 
     await deleteDoc(sessionRef);
-
-    console.log("Group deleted successfully!");
   } catch (error) {
     console.error("Error deleting group:", error);
   }
@@ -576,9 +572,7 @@ export const addJoinRequest = async (
     await updateDoc(studyGroupRef, {
       joinRequests: arrayUnion({ userId, userType }),
     });
-    console.log("Join request added successfully!");
   } catch (error) {
-    console.error("Error adding join request: ", error);
     throw new Error("Failed to add join request.");
   }
 };
@@ -594,9 +588,7 @@ export const handleRejectRequest = async (
     await updateDoc(studyGroupRef, {
       joinRequests: arrayRemove({ userId, userType: type }), //
     });
-    console.log("Join request rejected successfully!");
   } catch (error) {
-    console.error("Error rejecting join request: ", error);
     throw new Error("Failed to reject join request.");
   }
 };
@@ -617,9 +609,7 @@ export const handleAcceptRequest = async (
       }),
       joinRequests: arrayRemove({ userId, userType: type }),
     });
-    console.log("Join request accepted successfully!");
   } catch (error) {
-    console.error("Error accepting join request: ", error);
     throw new Error("Failed to accept join request.");
   }
 };

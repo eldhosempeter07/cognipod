@@ -3,6 +3,7 @@ import { FieldValue, Timestamp } from "firebase/firestore";
 export interface StudyGroup {
   id?: string;
   name: string;
+  query_name: string;
   description: string;
   groupImage: string;
   category: string;

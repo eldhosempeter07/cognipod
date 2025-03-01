@@ -28,7 +28,6 @@ const CreateSession: React.FC = () => {
     if (user) {
       getUserGroups(user.uid)
         .then((groups) => {
-          console.log(groups);
           setGroups(groups);
         })
         .catch((error) => {

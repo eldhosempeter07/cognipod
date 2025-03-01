@@ -7,7 +7,8 @@ import {
 } from "../util/firebase/services/group";
 import { StudyGroup } from "../util/types";
 import { AuthContext } from "../util/context/authContext";
-import profileImg from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
+import LoadingScreen from "../components/loadingScreen";
 
 const JoinRequestsPage = () => {
   const { groupId } = useParams();
@@ -29,7 +30,11 @@ const JoinRequestsPage = () => {
   }, [groupId]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   if (!group) {
@@ -65,8 +70,6 @@ const JoinRequestsPage = () => {
     }
   };
 
-  console.log(group);
-
   return (
     <div className="p-6 mt-10">
       <h1 className="text-2xl tracking-tight font-bold mb-6">Join Requests</h1>
@@ -79,7 +82,7 @@ const JoinRequestsPage = () => {
               <div className="">
                 <div className="flex items-center space-x-4">
                   <img
-                    src={request.imageUrl || profileImg}
+                    src={request.imageUrl || profile}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover"
                   />

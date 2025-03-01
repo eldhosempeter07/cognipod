@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   createUserPost,
   fetchUserFeed,
@@ -6,7 +6,7 @@ import {
 import { AuthContext } from "../util/context/authContext";
 import { Post, User } from "../util/types";
 import PostImage from "../components/postImage";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 import { toggleLikePost } from "../util/firebase/services/group";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/loadingScreen";
@@ -24,32 +24,27 @@ import SuggestionsList from "../components/SuggestionsList";
 import FriendRequests from "../components/recievedRequests";
 import CreatePostModal from "../components/CreatePostModal";
 import CreatePost from "../components/createPost";
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  setDoc,
-} from "@firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "@firebase/firestore";
 
 const UserFeed = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [friendsLoading, setFriendsLoading] = useState<boolean>(true);
   const { user } = useContext(AuthContext) ?? { user: null };
-  const [likeAdded, setlikeAdded] = useState(false);
+  const [likeAdded, setLikeAdded] = useState(false);
   const navigate = useNavigate();
   const [postAdded, setPostAdded] = useState(false);
 
-  const [friends, setFriends] = useState<any[]>([]);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
+  const [suggestions, setSuggestions] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [receivedRequests, setReceivedRequests] = useState<User[]>([]);
+
   const userId = auth.currentUser?.uid;
 
-  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
-
+  // Fetch friends, suggestions, and received requests
   useEffect(() => {
     if (userId) {
       setFriendsLoading(true);
@@ -72,15 +67,34 @@ const UserFeed = () => {
     }
   }, [userId]);
 
-  const handleAddFriend = async (friend: User) => {
+  const loadFeed = useCallback(async () => {
+    if (!user?.uid) return;
+    setLoading(true);
     try {
-      if (!userId || !friend.id) return;
+      const userFeed = await fetchUserFeed(user.uid);
+      setPosts(userFeed);
+    } catch (error) {
+      console.error("Failed to load feed:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uid]);
 
-      const { id, name } = friend;
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed, postAdded]);
 
-      await acceptFriendRequest(userId, id);
-
+  // Handle adding a friend
+  const handleAddFriend = useCallback(
+    async (friend: User) => {
       try {
+        if (!userId || !friend.id) return;
+
+        const { id, name } = friend;
+
+        await acceptFriendRequest(userId, id);
+
+        // Send notification
         const notification = {
           authorId: user?.uid,
           timestamp: serverTimestamp(),
@@ -91,30 +105,31 @@ const UserFeed = () => {
 
         const notifRef = collection(db, "users", id, "notifications");
         await addDoc(notifRef, notification);
+
+        // Update state
+        setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
+        setFriends((prevFriends) => {
+          const newFriend = receivedRequests.find((user) => user.id === id);
+          return newFriend ? [...prevFriends, newFriend] : prevFriends;
+        });
       } catch (error) {
-        console.log(error);
+        console.error("Failed to add friend:", error);
       }
+    },
+    [userId, user?.uid, receivedRequests]
+  );
 
-      setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
-
-      setFriends((prevFriends) => {
-        const newFriend = receivedRequests.find((user) => user.id === id);
-        return newFriend ? [...prevFriends, newFriend] : prevFriends;
-      });
-    } catch (error) {
-      console.error("Failed to add friend:", error);
-    }
-  };
-
-  const handleRejectFriendRequest = async (friend: User) => {
-    try {
-      if (!userId || !friend.id) return;
-
-      const { id, name } = friend;
-
-      await rejectFriendRequest(id, userId);
-
+  // Handle rejecting a friend request
+  const handleRejectFriendRequest = useCallback(
+    async (friend: User) => {
       try {
+        if (!userId || !friend.id) return;
+
+        const { id, name } = friend;
+
+        await rejectFriendRequest(id, userId);
+
+        // Send notification
         const notification = {
           authorId: userId,
           timestamp: serverTimestamp(),
@@ -125,84 +140,76 @@ const UserFeed = () => {
 
         const notifRef = collection(db, "users", id, "notifications");
         await addDoc(notifRef, notification);
+
+        // Update state
+        setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
+        setSuggestions((prevSuggestions) => {
+          const newSuggestion = suggestions.find((user) => user.id === id);
+          return newSuggestion
+            ? [...prevSuggestions, newSuggestion]
+            : prevSuggestions;
+        });
       } catch (error) {
-        console.log(error);
+        console.error("Failed to reject friend request:", error);
       }
+    },
+    [userId, suggestions]
+  );
 
-      setReceivedRequests((prev) => prev.filter((user) => user.id !== id));
+  // Handle removing a friend
+  const handleRemoveFriend = useCallback(
+    async (friendId: string) => {
+      try {
+        if (!userId) return;
 
-      setSuggestions((prevFriends) => {
-        const newFriend = suggestions.find((user) => user.id === id);
-        return newFriend ? [...prevFriends, newFriend] : prevFriends;
-      });
-    } catch (error) {
-      console.error("Failed to add friend:", error);
-    }
-  };
+        await removeFriend(userId, friendId);
+        setFriends((prev) => prev.filter((user) => user.id !== friendId));
+        const removedFriend = friends.find((user) => user.id === friendId);
+        if (removedFriend) setSuggestions((prev) => [...prev, removedFriend]);
+      } catch (error) {
+        console.error("Failed to remove friend:", error);
+      }
+    },
+    [userId, friends]
+  );
 
-  const handleRemoveFriend = async (friendId: string) => {
-    try {
-      if (!userId) return;
+  // Handle liking a post
+  const handlePostLike = useCallback(
+    async (type: "user" | "group", postId: string, groupId: string) => {
+      setLikeAdded(false);
+      if (groupId && user && postId) {
+        await toggleLikePost(type, groupId, postId, user.uid);
+        setLikeAdded(true);
+      }
+    },
+    [user]
+  );
 
-      await removeFriend(userId, friendId);
-      setFriends((prev) => prev.filter((user) => user.id !== friendId));
-      const removedFriend = friends.find((user) => user.id === friendId);
-      if (removedFriend) setSuggestions((prev) => [...prev, removedFriend]);
-    } catch (error) {
-      console.error("Failed to remove friend:", error);
-    }
-  };
+  // Handle creating a post
+  const handlePost = useCallback(
+    async (post: Post) => {
+      setPostAdded(false);
+      const { title, description, file } = post;
+      if (user && user.uid) {
+        await createUserPost(user.uid, {
+          title,
+          description,
+          file: file,
+          uploadedBy: user.uid,
+          type: "user",
+        });
+        setIsModalOpen(false);
+        setPostAdded(true);
+      }
+    },
+    [user]
+  );
 
-  const loadFeed = async () => {
-    if (!user?.uid) return;
-    setLoading(true);
-    const userFeed = await fetchUserFeed(user.uid);
-    setPosts(userFeed);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadFeed();
-  }, [postAdded]);
-
-  useEffect(() => {}, [user?.uid]);
-
-  const handlePostLike = async (
-    type: "user" | "group",
-    postId: string,
-    groupId: string
-  ) => {
-    setlikeAdded(false);
-    if (groupId && user && postId)
-      await toggleLikePost(type, groupId, postId, user.uid);
-    setlikeAdded(true);
-  };
-
-  const handlePost = async (post: Post) => {
-    setPostAdded(false);
-
-    const { title, description, file } = post;
-    if (user && user) {
-      await createUserPost(user.uid, {
-        title,
-        description,
-        file: file,
-        uploadedBy: user.uid,
-        type: "user",
-      });
-
-      setIsModalOpen(false);
-      setPostAdded(true);
-    }
-  };
+  console.log(posts);
 
   return (
     <>
-      {loading && (
-        <>
-          <LoadingScreen />
-        </>
-      )}
+      {loading && <LoadingScreen />}
       <div className="container mx-auto p-6 mt-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white text-black p-6 lg:col-span-2 order-2 lg:order-1">
@@ -219,9 +226,7 @@ const UserFeed = () => {
                 <input
                   type="text"
                   placeholder="Create a post..."
-                  onClick={() => {
-                    setIsModalOpen(true);
-                  }}
+                  onClick={() => setIsModalOpen(true)}
                   className="w-full p-2 border focus:outline-none text-black border-yellow-500 rounded-lg"
                   readOnly
                 />
@@ -296,7 +301,11 @@ const UserFeed = () => {
                     <button
                       className="flex items-center space-x-2 hover:text-yellow-500 transition-colors duration-200"
                       onClick={() =>
-                        navigate(`/${post.groupId}/post/${post.id}`)
+                        navigate(
+                          post.type === "user"
+                            ? `/user/${post.uploadedBy}/post/${post.id}`
+                            : `/group/${post.groupId}/post/${post.id}`
+                        )
                       }
                     >
                       <svg

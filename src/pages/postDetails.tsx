@@ -11,7 +11,7 @@ import { Comment, Post } from "@/util/types";
 import PostImage from "../components/postImage";
 import LikeButton from "../components/likeButton";
 import CommentForm from "../components/commentForm";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 import { Timestamp } from "firebase/firestore";
 const PostDetail = () => {
   const { user } = useContext(AuthContext) ?? {

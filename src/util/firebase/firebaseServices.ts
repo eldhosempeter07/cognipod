@@ -91,8 +91,6 @@ export const fetchUserProfile = async (userId: string) => {
 
 // Update user profile data
 export const updateUserProfile = async (userId: string, data: any) => {
-  console.log(data.file);
-
   const userDocRef = doc(db, "users", userId);
   await updateDoc(userDocRef, {
     ...data,
@@ -108,38 +106,6 @@ export const uploadProfileImage = async (userId: string, file: File) => {
   return downloadURL;
 };
 
-// export const triggerGroupPostNotification = async (postData: PostData) => {
-//   const {
-//     groupId,
-//     postId,
-//     members,
-//     authorId,
-
-//     link,
-//     postAuthorName,
-//     groupName,
-//   } = postData;
-//   try {
-//     const response = await fetch("http://localhost:3001/notify/newGroupPost", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({
-//         groupId,
-//         postId,
-//         members,
-//         authorId,
-//         postAuthorName,
-//         groupName,
-//         link,
-//       }),
-//     });
-//     const result = await response.json();
-//     console.log("Notification triggered:", result);
-//   } catch (error) {
-//     console.error("Error triggering notification:", error);
-//   }
-// };
-
 export const markNotificationsAsRead = async (userId: string) => {
   if (!userId) {
     console.error("Error: userId is required.");
@@ -153,7 +119,6 @@ export const markNotificationsAsRead = async (userId: string) => {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.log("No unread notifications to update.");
       return;
     }
 
@@ -164,10 +129,6 @@ export const markNotificationsAsRead = async (userId: string) => {
     );
 
     await Promise.all(updatePromises);
-
-    console.log(
-      `Marked ${querySnapshot.size} notifications as read for user: ${userId}`
-    );
   } catch (error) {
     console.error("Error updating notifications:", error);
   }
@@ -238,28 +199,44 @@ export const fetchUserAndFriendsPosts = async (
   userId: string
 ): Promise<Post[]> => {
   try {
+    // Fetch the current user's profile info
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.exists() ? userSnap.data() : null;
+
     // Fetch the current user's posts
     const userPostsRef = collection(db, "users", userId, "posts");
     const userPostsQuery = query(userPostsRef, orderBy("createdAt", "desc"));
     const userPostsSnapshot = await getDocs(userPostsQuery);
     const userPosts = userPostsSnapshot.docs.map((doc) => ({
       id: doc.id,
+      userName: userData?.name || "Unknown",
+      imageUrl: userData?.imageUrl || "",
       ...doc.data(),
     })) as Post[];
 
+    // Fetch the user's friends
     const friendsRef = collection(db, "users", userId, "friends");
     const friendsSnapshot = await getDocs(friendsRef);
     const friendIds = friendsSnapshot.docs.map((doc) => doc.id);
 
+    // Fetch friends' posts along with their profile data
     const friendPostsPromises = friendIds.map(async (friendId) => {
+      const friendRef = doc(db, "users", friendId);
+      const friendSnap = await getDoc(friendRef);
+      const friendData = friendSnap.exists() ? friendSnap.data() : null;
+
       const friendPostsRef = collection(db, "users", friendId, "posts");
       const friendPostsQuery = query(
         friendPostsRef,
         orderBy("createdAt", "desc")
       );
       const friendPostsSnapshot = await getDocs(friendPostsQuery);
+
       return friendPostsSnapshot.docs.map((doc) => ({
         id: doc.id,
+        userName: friendData?.name || "Unknown",
+        imageUrl: friendData?.imageUrl || "",
         ...doc.data(),
       })) as Post[];
     });
@@ -279,6 +256,7 @@ export const fetchUserAndFriendsPosts = async (
     throw error;
   }
 };
+
 export const fetchUserFeed = async (userId: string): Promise<Post[]> => {
   if (!userId) {
     console.error("Error: userId is required.");
@@ -291,7 +269,6 @@ export const fetchUserFeed = async (userId: string): Promise<Post[]> => {
       fetchUserAndFriendsPosts(userId),
     ]);
 
-    // Merge and sort posts by timestamp (latest first)
     const allPosts: Post[] = [...studyGroupPosts, ...userPosts];
 
     const sortedPosts = allPosts.sort(
@@ -299,8 +276,6 @@ export const fetchUserFeed = async (userId: string): Promise<Post[]> => {
         ((b.createdAt as Timestamp)?.toMillis() || 0) -
         ((a.createdAt as Timestamp)?.toMillis() || 0)
     );
-
-    // console.log(allPosts);
 
     return sortedPosts;
   } catch (error) {

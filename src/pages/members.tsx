@@ -6,9 +6,10 @@ import {
   updateGroupMembers,
 } from "../util/firebase/services/group";
 import { StudyGroup } from "../util/types";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 import Popup from "../components/popup";
 import MemberItem from "../components/memberItem";
+import LoadingScreen from "../components/loadingScreen";
 
 const MembersPage = () => {
   const { groupId } = useParams();
@@ -28,7 +29,12 @@ const MembersPage = () => {
     loadGroup();
   }, [groupId]);
 
-  if (!group) return <div>Loading...</div>;
+  if (!group)
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
 
   const admins = group.members.filter((m) =>
     group.groupAdmin.includes(m.memberId)

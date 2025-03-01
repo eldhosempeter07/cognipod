@@ -1,4 +1,4 @@
-import { Message, SessionData } from "@/util/types";
+import { Member, Message, SessionData, StudyGroup } from "@/util/types";
 import {
   collection,
   addDoc,
@@ -12,13 +12,14 @@ import {
   serverTimestamp,
   setDoc,
   deleteDoc,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
 export const addSession = async (sessionData: SessionData): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, "sessions"), sessionData);
-    console.log("Session created with ID: ", docRef.id);
     return docRef.id;
   } catch (error) {
     console.error("Error creating session: ", error);
@@ -26,37 +27,85 @@ export const addSession = async (sessionData: SessionData): Promise<string> => {
   }
 };
 
-export const getAllSessions = async (): Promise<SessionData[]> => {
+export const getAllSessions = async (
+  userId: string
+): Promise<SessionData[]> => {
   try {
     const sessionsRef = collection(db, "sessions");
     const querySnapshot = await getDocs(sessionsRef);
 
     const sessions: SessionData[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      sessions.push({
-        id: doc.id,
-        name: data.name,
-        description: data.description,
-        goals: data.goals,
-        type: data.type,
-        privacy: data.privacy,
-        selectedGroup: data.selectedGroup,
-        createdBy: data.createdBy,
-        createdDate: data.createdDate.toDate(),
-        meetingDate: data.meetingDate.toDate(),
-        moderator: data.moderator,
-        collaborators: data.collaborators,
-        password: data.password,
-        status: data.status,
-      });
-    });
+
+    for (const sessionDoc of querySnapshot.docs) {
+      const data = sessionDoc.data();
+
+      if (data.privacy === "public") {
+        sessions.push(formatSession(sessionDoc));
+        continue;
+      }
+
+      if (data.privacy === "private") {
+        if (data.createdBy === userId) {
+          console.log(data.createdBy === userId);
+          sessions.push(formatSession(sessionDoc));
+          continue;
+        }
+        if (data.selectedGroup === "friends") {
+          const friendsRef = collection(db, "users", data.createdBy, "friends");
+          const friendsSnapshot = await getDocs(friendsRef);
+          const friendIds = friendsSnapshot.docs.map(
+            (friendDoc) => friendDoc.id
+          );
+
+          if (!friendIds.includes(userId)) {
+            continue;
+          }
+        } else {
+          const groupRef = doc(db, "groups", data.selectedGroup);
+          const groupSnap = await getDoc(groupRef);
+
+          if (groupSnap.exists()) {
+            const groupData = groupSnap.data() as StudyGroup;
+            const members = groupData?.members || [];
+
+            if (!members.some((member: Member) => member.memberId === userId)) {
+              continue;
+            }
+          } else {
+            continue;
+          }
+        }
+
+        sessions.push(formatSession(sessionDoc));
+      }
+    }
 
     return sessions;
   } catch (error) {
     console.error("Error fetching sessions: ", error);
     throw new Error("Failed to fetch sessions. Please try again.");
   }
+};
+
+// Utility function to format session data
+const formatSession = (sessionDoc: QueryDocumentSnapshot<DocumentData>) => {
+  const data = sessionDoc.data();
+  return {
+    id: sessionDoc.id,
+    name: data.name,
+    description: data.description,
+    goals: data.goals,
+    type: data.type,
+    privacy: data.privacy,
+    selectedGroup: data.selectedGroup,
+    createdBy: data.createdBy,
+    createdDate: data.createdDate?.toDate?.() ?? null,
+    meetingDate: data.meetingDate?.toDate?.() ?? null,
+    moderator: data.moderator,
+    collaborators: data.collaborators,
+    password: data.password,
+    status: data.status,
+  };
 };
 
 // Fetch session details
@@ -130,8 +179,6 @@ export const updateSessionStatus = async (
     const sessionRef = doc(db, "sessions", sessionId);
 
     await setDoc(sessionRef, { status }, { merge: true });
-
-    console.log("Session status updated successfully!");
   } catch (error) {
     console.error("Error updating session status:", error);
     throw new Error("Failed to update session status.");
@@ -160,8 +207,6 @@ export const deleteSession = async (sessionId: string) => {
     const sessionRef = doc(db, "sessions", sessionId);
 
     await deleteDoc(sessionRef);
-
-    console.log("Session deleted successfully!");
   } catch (error) {
     console.error("Error deleting session:", error);
   }

@@ -3,7 +3,7 @@ import { User } from "../util/types";
 import { fetchFriends } from "../util/firebase/services/friends";
 import { auth } from "../util/firebase/firebase";
 import { searchFriends } from "../util/firebase/firebaseServices";
-
+import profile from "../util/images/profile.png";
 interface FriendsListProps {
   users: User[];
   limit?: number;
@@ -85,12 +85,9 @@ const FriendsList: React.FC<FriendsListProps> = ({
           >
             <div className="flex items-center">
               <img
-                src={user.imageUrl || "/default-avatar.png"}
+                src={user.imageUrl || profile}
                 alt={user.name || "Friend"}
                 className="w-10 h-10 rounded-full mr-4"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/default-avatar.png";
-                }}
               />
               <div>
                 <p className="font-medium">{user.name || "Unknown User"}</p>

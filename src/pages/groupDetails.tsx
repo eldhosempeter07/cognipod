@@ -19,9 +19,10 @@ import CreatePost from "../components/createPost";
 import PostFeed from "../components/displayPost";
 import CreatePostModal from "../components/CreatePostModal";
 import Chat from "../components/chat";
-import profile from "../util/images/profile.jpg";
+import profile from "../util/images/profile.png";
 import Popup from "../components/popup";
 import { db } from "../util/firebase/firebase";
+import LoadingScreen from "../components/loadingScreen";
 
 const GroupDetailsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +97,11 @@ const GroupDetailsPage = () => {
   }, [groupId]);
 
   if (!group) {
-    return <div>Loading...</div>;
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   const handlePost = async (post: Post) => {

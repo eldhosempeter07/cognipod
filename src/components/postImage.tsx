@@ -25,7 +25,6 @@ const PostImage: React.FC<PostImageProps> = ({ file, from }) => {
       ) : imageUrl ? (
         <div className="w-full flex justify-center max-w-2xl  rounded-lg max-h-96">
           {" "}
-          {/* Limit container height */}
           <img
             className={` h-64 ${
               from === "feed" ? "object-cover" : "object-contain"

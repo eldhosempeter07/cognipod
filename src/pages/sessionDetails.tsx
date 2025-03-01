@@ -18,7 +18,8 @@ import { Message, SessionData, User } from "../util/types";
 
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../util/firebase/firebase";
-import profileImg from "../util/images/profile.jpg";
+import profileImg from "../util/images/profile.png";
+import LoadingScreen from "../components/loadingScreen";
 
 const SessionDetails: React.FC = () => {
   const { user } = useContext(AuthContext) ?? {
@@ -40,22 +41,22 @@ const SessionDetails: React.FC = () => {
   const [isSessionEnded, setIsSessionEnded] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isSessionEnded) return;
+  // useEffect(() => {
+  //   if (isSessionEnded) return;
 
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (isSessionEnded) return;
-      event.preventDefault();
-      event.returnValue = "";
-      return "Are you sure you want to leave? Your changes may not be saved.";
-    };
+  //   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  //     if (isSessionEnded) return;
+  //     event.preventDefault();
+  //     event.returnValue = "";
+  //     return "Are you sure you want to leave? Your changes may not be saved.";
+  //   };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+  //   window.addEventListener("beforeunload", handleBeforeUnload);
 
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [isSessionEnded]);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", handleBeforeUnload);
+  //   };
+  // }, [isSessionEnded]);
 
   const fetchUserNames = async (userIds: string[]) => {
     const users: User[] = [];
@@ -98,7 +99,9 @@ const SessionDetails: React.FC = () => {
     if (isSessionEnded) return;
     const unsubscribeSession = subscribeToSession(sessionId, async (data) => {
       setSession(data);
-
+      if (data.status === "Ended") {
+        return navigate("/sessions");
+      }
       if (data.joined && Array.isArray(data.joined)) {
         const newUsers = data.joined.filter(
           (userId: string) => !joinedUsers.some((user) => user.id === userId)
@@ -115,8 +118,6 @@ const SessionDetails: React.FC = () => {
 
     // Subscribe to chat messages
     const unsubscribeChat = subscribeToChat(sessionId, (messages) => {
-      console.log(messages);
-
       setMessages(messages);
     });
 
@@ -175,7 +176,11 @@ const SessionDetails: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <div className="p-4">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   if (!session) {
@@ -353,14 +358,14 @@ const SessionDetails: React.FC = () => {
           </div>
         )}
 
-        {isSessionEnded
+        {/* {isSessionEnded
           ? null
           : isNewUserJoined &&
             newUserJoined !== user?.uid && (
               <div className="fixed bottom-4 right-4 bg-violet-500 text-white p-3 rounded-2xl shadow-lg">
                 <p className="text-lg font-semibold">{newUserJoined} joined</p>
               </div>
-            )}
+            )} */}
       </div>
     </div>
   );
