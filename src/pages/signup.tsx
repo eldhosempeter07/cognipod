@@ -1,24 +1,22 @@
 import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { auth, googleProvider } from "../util/firebase"; // Adjust the path to your Firebase config
+import { auth, googleProvider } from "../util/firebase/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   UserCredential,
 } from "firebase/auth";
-import { signUpUser } from "../util/firebaseServices"; // Adjust the path to your Firebase services
-import { useNavigate } from "react-router-dom"; // For navigation
+import { signUpUser } from "../util/firebase/firebaseServices";
+import { useNavigate } from "react-router-dom";
 
-// Define the form input types
 type Inputs = {
   name?: string;
   email: string;
   password: string;
 };
 
-// Function to generate validation schema based on login mode
 const getValidationSchema = (isLogin: boolean) =>
   Yup.object().shape({
     name: isLogin
@@ -27,25 +25,26 @@ const getValidationSchema = (isLogin: boolean) =>
     email: Yup.string()
       .email("Invalid email address")
       .required("Email is required"),
-    password: Yup.string()
-      .min(6, "Password must be at least 6 characters")
-      .required("Password is required"),
+    password: isLogin
+      ? Yup.string().notRequired()
+      : Yup.string()
+          .min(6, "Password must be at least 6 characters")
+          .required("Password is required"),
   });
 
 export default function SignUpPage() {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and signup
-  const [error, setError] = useState(""); // Error message
-  const [loading, setLoading] = useState(false); // Loading state
-  const navigate = useNavigate(); // For navigation
+  const [isLogin, setIsLogin] = useState(true);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Formik setup
   const formik = useFormik<Inputs>({
     initialValues: {
       name: "",
       email: "",
       password: "",
     },
-    validationSchema: getValidationSchema(isLogin), // Dynamically apply validation
+    validationSchema: getValidationSchema(isLogin),
     validateOnChange: true,
     validateOnBlur: true,
     onSubmit: async (values) => {
@@ -53,7 +52,6 @@ export default function SignUpPage() {
       setLoading(true);
       try {
         if (isLogin) {
-          // Login with email and password
           const userResponse: UserCredential = await signInWithEmailAndPassword(
             auth,
             values.email,
@@ -66,31 +64,49 @@ export default function SignUpPage() {
             });
           }
         } else {
-          // Sign up with email and password
           const userResponse: UserCredential =
             await createUserWithEmailAndPassword(
               auth,
               values.email,
               values.password
             );
+
           if (userResponse.user.email) {
             await signUpUser({
+              id: userResponse.user.uid,
               email: userResponse.user.email,
               name: values.name ?? "",
             });
           }
         }
 
-        // Redirect to home page
         navigate("/");
       } catch (err) {
         if (err instanceof Error) {
-          setError(err.message); // Handle Firebase errors
+          console.log(
+            err.message.includes("Firebase: Error (auth/invalid-credential)")
+          );
+
+          if (
+            err.message.includes("Firebase: Error (auth/invalid-credential)")
+          ) {
+            return setError("Incorrect Username or Password");
+          }
+          if (
+            err.message.includes(
+              "Firebase: Error (auth/popup-closed-by-user)."
+            ) ||
+            err.message.includes(
+              "Firebase: Error (auth/cancelled-popup-request)."
+            )
+          )
+            return;
+          setError(err.message);
         } else {
-          setError("An unknown error occurred."); // Handle unknown errors
+          setError("An unknown error occurred.");
         }
       } finally {
-        setLoading(false); // Reset loading state
+        setLoading(false);
       }
     },
   });
@@ -102,9 +118,9 @@ export default function SignUpPage() {
         auth,
         googleProvider
       );
-      const { email, displayName } = userResponse.user;
+      const { email, displayName, uid } = userResponse.user;
       if (email && displayName) {
-        await signUpUser({ email: email, name: displayName });
+        await signUpUser({ id: uid, email: email, name: displayName });
       }
 
       // Redirect to home page
@@ -119,9 +135,9 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 pt-20">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        <h1 className="text-xl font-bold text-yellow-500 mb-6 text-center uppercase">
           {isLogin ? "Login" : "Sign Up"}
         </h1>
 
@@ -131,7 +147,7 @@ export default function SignUpPage() {
             <div>
               <label
                 htmlFor="name"
-                className="block text-gray-700 font-bold mb-2"
+                className="block text-gray-700 font-medium mb-2"
               >
                 Full Name
               </label>
@@ -139,7 +155,7 @@ export default function SignUpPage() {
                 type="text"
                 id="name"
                 name="name"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 value={formik.values.name}
@@ -155,15 +171,15 @@ export default function SignUpPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-gray-700 font-bold mb-2"
+              className="block text-gray-700 font-medium mb-2"
             >
               Email
             </label>
             <input
-              type="email"
+              type="text"
               id="email"
               name="email"
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.email}
@@ -176,7 +192,7 @@ export default function SignUpPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-gray-700 font-bold mb-2"
+              className="block text-gray-700 font-medium mb-2"
             >
               Password
             </label>
@@ -184,7 +200,7 @@ export default function SignUpPage() {
               type="password"
               id="password"
               name="password"
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.password}
@@ -202,10 +218,10 @@ export default function SignUpPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg hover:bg-gray-950 transition duration-300 font-medium"
             disabled={loading}
           >
-            {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
+            {loading ? "Login..." : isLogin ? "Login" : "Sign Up"}
           </button>
         </form>
 
@@ -214,7 +230,7 @@ export default function SignUpPage() {
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-500 hover:underline"
+            className="text-gray-500 hover:underline font-medium"
           >
             {isLogin ? "Sign Up" : "Login"}
           </button>
@@ -224,7 +240,7 @@ export default function SignUpPage() {
         <div className="mt-6 space-y-4">
           <button
             onClick={handleGoogleSignIn}
-            className="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+            className="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition duration-300 font-medium"
           >
             Sign in with Google
           </button>
@@ -232,7 +248,7 @@ export default function SignUpPage() {
 
         {/* Link to Home */}
         <p className="text-center text-gray-600 mt-4">
-          <a href="/" className="text-blue-500 hover:underline">
+          <a href="/" className="text-gray-500 hover:underline font-medium">
             Go back to Home
           </a>
         </p>
