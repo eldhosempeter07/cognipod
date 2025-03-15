@@ -332,11 +332,13 @@ export const getPosts = async (groupId: string): Promise<Post[]> => {
 
       let userName = "";
       let userEmail = "";
+      let imageUrl = "";
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         userName = userData.name || "";
         userEmail = userData.email || "";
+        imageUrl = userData.imageUrl || "";
       }
 
       return {
@@ -344,6 +346,7 @@ export const getPosts = async (groupId: string): Promise<Post[]> => {
         ...postData,
         userName,
         userEmail,
+        imageUrl,
       };
     })
   );

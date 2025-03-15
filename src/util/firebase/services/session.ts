@@ -46,7 +46,6 @@ export const getAllSessions = async (
 
       if (data.privacy === "private") {
         if (data.createdBy === userId) {
-          console.log(data.createdBy === userId);
           sessions.push(formatSession(sessionDoc));
           continue;
         }

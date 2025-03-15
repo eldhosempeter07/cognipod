@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css"; // Import the CSS for Skeleton
 import {
   fetchGroupDetails,
   subscribeToMessages,
@@ -133,6 +135,8 @@ const GroupDetailsPage = () => {
           members: group.members,
           link: `/${groupId}/post/${id}`,
           groupName: group.name,
+          message: `${memberName} added a post in ${group.name}`,
+          read: false,
         };
 
         group.members.forEach(async (member) => {
@@ -200,12 +204,16 @@ const GroupDetailsPage = () => {
   return (
     <div className="bg-white text-yellow-500 min-h-screen px-10 mb-10 pt-6 mt-12">
       <div className="w-full h-64 overflow-hidden relative">
-        {group.groupImage && (
-          <img
-            src={group.groupImage}
-            alt="cover"
-            className="w-full h-full object-cover"
-          />
+        {loading ? (
+          <Skeleton height={256} className="w-full" />
+        ) : (
+          group.groupImage && (
+            <img
+              src={group.groupImage}
+              alt="cover"
+              className="w-full h-full object-cover"
+            />
+          )
         )}
         {user?.uid && group.groupAdmin.includes(user.uid) && (
           <label className="absolute bottom-2 right-2 bg-black/50 text-white px-3 py-1 rounded cursor-pointer hover:bg-black/70">
@@ -225,8 +233,12 @@ const GroupDetailsPage = () => {
       </div>
 
       {/* Group Name and Description */}
-      <h1 className="text-4xl font-bold mb-6">{group.name}</h1>
-      <p className="text-black mb-4">{group.description}</p>
+      <h1 className="text-4xl font-bold mb-6">
+        {loading ? <Skeleton width={200} /> : group.name}
+      </h1>
+      <p className="text-black mb-4">
+        {loading ? <Skeleton count={3} /> : group.description}
+      </p>
 
       {/* Main Content */}
       {isUserMember ? (
@@ -273,16 +285,20 @@ const GroupDetailsPage = () => {
 
             {/* Create Post */}
             <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Create a post..."
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setIsOptionModalOpen(false);
-                }}
-                className="w-full p-2 border focus:outline-none text-black border-yellow-500 rounded-lg"
-                readOnly
-              />
+              {loading ? (
+                <Skeleton height={40} />
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Create a post..."
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setIsOptionModalOpen(false);
+                  }}
+                  className="w-full p-2 border focus:outline-none text-black border-yellow-500 rounded-lg"
+                  readOnly
+                />
+              )}
               {groupId && (
                 <CreatePostModal
                   isOpen={isModalOpen}
@@ -330,47 +346,72 @@ const GroupDetailsPage = () => {
                 </a>
               </div>
               <ul>
-                {group.members.map((member, index) => (
-                  <li key={index} className="text-black mb-2 flex items-center">
-                    <img
-                      src={member.profilePic || profile}
-                      alt={`${member.name}'s profile`}
-                      className="w-10 h-10 rounded-full mr-3"
-                    />
-                    <span>
-                      {member.name} {member.memberType === "Admin" && "(Admin)"}
-                    </span>
-                  </li>
-                ))}
+                {loading
+                  ? Array.from({ length: 5 }).map((_, index) => (
+                      <li
+                        key={index}
+                        className="text-black mb-2 flex items-center"
+                      >
+                        <Skeleton
+                          circle
+                          height={40}
+                          width={40}
+                          className="mr-3"
+                        />
+                        <Skeleton width={100} />
+                      </li>
+                    ))
+                  : group.members.map((member, index) => (
+                      <li
+                        key={index}
+                        className="text-black mb-2 flex items-center"
+                      >
+                        <img
+                          src={member.imageUrl || profile}
+                          alt={`${member.name}'s profile`}
+                          className="w-10 h-10 rounded-full mr-3"
+                        />
+                        <span>
+                          {member.name}{" "}
+                          {member.memberType === "Admin" && "(Admin)"}
+                        </span>
+                      </li>
+                    ))}
               </ul>
             </div>
           </div>
         </div>
       ) : (
         <div className="text-left mt-3">
-          <button
-            disabled={
-              user &&
-              group.joinRequests.some((request) => request.userId === user?.uid)
-                ? true
-                : false
-            }
-            onClick={() => {
-              if (group.groupType === "Private") {
-                group.id && handleJoinGroup(group.id, group.groupType);
-              }
-            }}
-            className="bg-yellow-600 disabled:bg-gray-400 text-white font-semibold uppercase text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
-          >
-            {group.groupType === "Private"
-              ? user &&
+          {loading ? (
+            <Skeleton height={40} width={150} />
+          ) : (
+            <button
+              disabled={
+                user &&
                 group.joinRequests.some(
                   (request) => request.userId === user?.uid
                 )
-                ? "Request Sent"
-                : "Request To Join"
-              : "Join"}
-          </button>{" "}
+                  ? true
+                  : false
+              }
+              onClick={() => {
+                if (group.groupType === "Private") {
+                  group.id && handleJoinGroup(group.id, group.groupType);
+                }
+              }}
+              className="bg-yellow-600 disabled:bg-gray-400 text-white font-semibold uppercase text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
+            >
+              {group.groupType === "Private"
+                ? user &&
+                  group.joinRequests.some(
+                    (request) => request.userId === user?.uid
+                  )
+                  ? "Request Sent"
+                  : "Request To Join"
+                : "Join"}
+            </button>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Home from "./pages/home";
 import AuthRouter from "./util/authRouter";
 import { useContext, useEffect, useState } from "react";
@@ -25,7 +25,6 @@ const App = () => {
     loading: true,
   };
 
-  const navigate = useNavigate();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -42,7 +41,11 @@ const App = () => {
     <>
       <Header />
       <Routes>
-        <Route path="/" element={user ? <Navigate to="/feed" /> : <Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route
+          path="/"
+          element={user ? <Navigate to="/feed" /> : <Navigate to="/home" />}
+        />
 
         <Route
           path="/signup"
