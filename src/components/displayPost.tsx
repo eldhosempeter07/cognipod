@@ -13,7 +13,6 @@ interface PostFeedProps {
 }
 
 const PostFeed: React.FC<PostFeedProps> = ({
-  postLoading,
   posts,
   handlePostLike,
   groupId,
@@ -33,7 +32,7 @@ const PostFeed: React.FC<PostFeedProps> = ({
         >
           <li className="text-black mb-2 flex items-center">
             <img
-              src={profile}
+              src={post.imageUrl || profile}
               alt="profile"
               className="w-10 h-10 rounded-full mr-3"
             />
@@ -45,7 +44,7 @@ const PostFeed: React.FC<PostFeedProps> = ({
           <p className="text-gray-700 mb-4">{post.description}</p>
 
           {post.file && (
-            <a href={`/${groupId}/post/${post.id}`} className="mb-4">
+            <a href={`/group/${groupId}/post/${post.id}`} className="mb-4">
               <PostImage file={post.file} from="feed" />
             </a>
           )}
@@ -73,7 +72,7 @@ const PostFeed: React.FC<PostFeedProps> = ({
             </button>
             <button
               className="flex items-center space-x-2 hover:text-yellow-500 transition-colors duration-200"
-              onClick={() => navigate(`/${groupId}/post/${post.id}`)}
+              onClick={() => navigate(`/group/${groupId}/post/${post.id}`)}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

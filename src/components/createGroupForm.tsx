@@ -113,8 +113,6 @@ export default function CreateGroupForm() {
     }
   };
 
-  console.log(formData.groupSize);
-
   return (
     <form
       onSubmit={handleSubmit}

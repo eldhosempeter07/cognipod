@@ -24,12 +24,19 @@ interface Notification {
 
 interface NotificationIconProps {
   userId: string;
+  notificationOpen: boolean;
+  setNotificationOpen: (prev: boolean) => void;
+  closeAllDropdowns: () => void;
 }
 
-const NotificationIcon: React.FC<NotificationIconProps> = ({ userId }) => {
+const NotificationIcon: React.FC<NotificationIconProps> = ({
+  userId,
+  notificationOpen,
+  setNotificationOpen,
+  closeAllDropdowns,
+}) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [isOpen, setIsOpen] = useState<boolean>(false); // For dropdown toggle
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -89,18 +96,18 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({ userId }) => {
   }, [userId]);
 
   const handleNotification = async () => {
-    setIsOpen(!isOpen);
+    setNotificationOpen(!notificationOpen);
+    closeAllDropdowns();
+
     await markNotificationsAsRead(userId);
   };
 
   return (
     <div className="relative">
-      {/* Notification Icon */}
       <button
         onClick={handleNotification}
         className="relative p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"
       >
-        {/* Simple Bell Icon (SVG without third-party libraries) */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -115,7 +122,6 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({ userId }) => {
             d="M15 17h5l-1.5-2M9 17H4l1.5-2m13.5-5a7 7 0 10-14 0v3.5a2 2 0 01-.5 1.34l-.5.66h16l-.5-.66a2 2 0 01-.5-1.34V10zM13.73 21a2 2 0 01-3.46 0"
           />
         </svg>
-        {/* Unread Notification Badge */}
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
             {unreadCount}
@@ -123,8 +129,7 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({ userId }) => {
         )}
       </button>
 
-      {/* Dropdown Notification List */}
-      {isOpen && (
+      {notificationOpen && (
         <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
           <div className="p-2 text-gray-700 font-semibold border-b">
             Notifications
@@ -144,13 +149,12 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({ userId }) => {
               <p className="p-3 text-sm text-gray-500">No new notifications</p>
             )}
           </div>
-          {/* See More Button */}
-          <button
+          {/* <button
             onClick={() => navigate("/notifications")}
             className="w-full text-center py-2 bg-gray-100 hover:bg-gray-200 transition text-gray-700 text-sm font-semibold"
           >
             See More
-          </button>
+          </button> */}
         </div>
       )}
     </div>

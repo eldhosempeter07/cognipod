@@ -138,7 +138,7 @@ const SessionsPage: React.FC = () => {
                       Delete
                     </button>
                   ) : null}
-                  {isSessionEnded ? (
+                  {/* {isSessionEnded ? (
                     <button
                       className="bg-black text-white px-3 py-1 rounded ml-2"
                       onClick={() =>
@@ -147,7 +147,7 @@ const SessionsPage: React.FC = () => {
                     >
                       View
                     </button>
-                  ) : null}
+                  ) : null} */}
                 </div>
               </div>
               <p className="text-gray-600 mb-4">{session.description}</p>

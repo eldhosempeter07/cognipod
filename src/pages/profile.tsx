@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import {
   fetchUserProfile,
   updateUserProfile,
@@ -237,16 +239,21 @@ const Profile = () => {
                   Profile Image
                 </label>
                 <div className="flex items-center space-x-4">
-                  <img
-                    src={profile.imageUrl || profileImg}
-                    alt="Profile"
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
+                  {loading ? (
+                    <Skeleton circle height={64} width={64} />
+                  ) : (
+                    <img
+                      src={profile.imageUrl || profileImg}
+                      alt="Profile"
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  )}
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="text-sm"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -259,15 +266,19 @@ const Profile = () => {
                 >
                   Name
                 </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formik.values.name}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {loading ? (
+                  <Skeleton height={40} />
+                ) : (
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formik.values.name}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
                 {formik.touched.name && formik.errors.name ? (
                   <div className="text-red-500 text-sm mt-1">
                     {formik.errors.name}
@@ -283,14 +294,18 @@ const Profile = () => {
                 >
                   Email
                 </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={profile.email}
-                  disabled
-                  className="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
-                />
+                {loading ? (
+                  <Skeleton height={40} />
+                ) : (
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={profile.email}
+                    disabled
+                    className="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                  />
+                )}
               </div>
 
               {/* College */}
@@ -301,15 +316,19 @@ const Profile = () => {
                 >
                   College
                 </label>
-                <input
-                  type="text"
-                  id="college"
-                  name="college"
-                  value={formik.values.college}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {loading ? (
+                  <Skeleton height={40} />
+                ) : (
+                  <input
+                    type="text"
+                    id="college"
+                    name="college"
+                    value={formik.values.college}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
                 {formik.touched.college && formik.errors.college ? (
                   <div className="text-red-500 text-sm mt-1">
                     {formik.errors.college}
@@ -325,15 +344,19 @@ const Profile = () => {
                 >
                   Phone
                 </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formik.values.phone}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {loading ? (
+                  <Skeleton height={40} />
+                ) : (
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formik.values.phone}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
                 {formik.touched.phone && formik.errors.phone ? (
                   <div className="text-red-500 text-sm mt-1">
                     {formik.errors.phone}
@@ -353,9 +376,14 @@ const Profile = () => {
           </div>
         </div>
 
-        {receivedRequests.length === 0 &&
-        friends.length === 0 &&
-        suggestions.length === 0 ? null : (
+        {/* Right Section */}
+        {loading ? (
+          <div className="order-1 lg:order-2 bg-white p-4 rounded-lg shadow-lg lg:col-span-2">
+            <Skeleton height={200} count={3} />
+          </div>
+        ) : receivedRequests.length === 0 &&
+          friends.length === 0 &&
+          suggestions.length === 0 ? null : (
           <div className="order-1 lg:order-2 bg-white p-4 rounded-lg shadow-lg lg:col-span-2">
             {receivedRequests.length === 0 ? null : (
               <FriendRequests

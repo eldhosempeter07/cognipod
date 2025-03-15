@@ -19,7 +19,7 @@ const PostImage: React.FC<PostImageProps> = ({ file, from }) => {
     });
   }, [file.path]);
   return (
-    <div className="relative w-full flex justify-center items-center">
+    <div className="relative w-full flex justify-center items-center mb-2">
       {loading ? (
         <div className="w-full h-64 bg-gray-200 animate-pulse rounded-lg"></div>
       ) : imageUrl ? (

@@ -88,6 +88,7 @@ export type Member = {
   email?: string;
   name?: string;
   profilePic?: string;
+  imageUrl?: string;
 };
 
 export interface FileProp {

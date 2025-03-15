@@ -26,7 +26,7 @@ const CommentForm: FC<CommentFormProp> = ({ handleComment }) => {
       />
       <button
         type="submit"
-        className="mt-2 bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-600 transition"
+        className="mt-4 ml-1 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition"
       >
         Comment
       </button>
