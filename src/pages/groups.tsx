@@ -185,67 +185,55 @@ const Groups = () => {
         </div>
 
         <div className="space-y-4">
-          {loading && groups.length === 0
-            ? Array.from({ length: limitPerPage }).map((_, index) => (
-                <div
-                  key={index}
-                  className="border border-yellow-600 rounded-lg p-4 bg-white shadow-lg"
-                >
-                  <Skeleton height={30} width="60%" />
-                  <Skeleton height={20} width="80%" className="mt-2" />
-                  <Skeleton height={20} width="40%" className="mt-1" />
-                  <Skeleton height={20} width="30%" className="mt-1" />
-                  <div className="mt-4 space-x-2">
-                    <Skeleton height={40} width={100} />
-                    <Skeleton height={40} width={150} />
-                  </div>
-                </div>
-              ))
-            : filteredGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className="border border-yellow-600 rounded-lg p-4 bg-white shadow-lg"
-                >
-                  <h2 className="text-2xl font-semibold text-yellow-600">
-                    {group.name}
-                  </h2>
-                  <p className="text-gray-700 mt-2">{group.description}</p>
-                  <p className="text-gray-600 mt-1">
-                    Category: {group.category}
-                  </p>
-                  <p className="text-gray-600 mt-1">
-                    Members: {group.members.length}
-                  </p>
-                  <div className="mt-4 space-x-2">
+          {!loading && filteredGroups.length === 0 ? (
+            <div>
+              <h3>No Groups Available</h3>
+            </div>
+          ) : (
+            filteredGroups.map((group) => (
+              <div
+                key={group.id}
+                className="border border-yellow-600 rounded-lg p-4 bg-white shadow-lg"
+              >
+                <h2 className="text-2xl font-semibold text-yellow-600">
+                  {group.name}
+                </h2>
+                <p className="text-gray-700 mt-2">{group.description}</p>
+                <p className="text-gray-600 mt-1">Category: {group.category}</p>
+                <p className="text-gray-600 mt-1">
+                  Members: {group.members.length}
+                </p>
+                <div className="mt-4 space-x-2">
+                  <button
+                    onClick={() => handleViewMore(group)}
+                    className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
+                  >
+                    View group
+                  </button>
+                  {!group.members.some(
+                    (member) => member.memberId === user?.uid
+                  ) && (
                     <button
-                      onClick={() => handleViewMore(group)}
-                      className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
+                      onClick={() => handleJoinGroup(group)}
+                      className="bg-yellow-600 text-white font-semibold text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
                     >
-                      View group
+                      {group.groupType === "Public"
+                        ? "Join"
+                        : "Request To Join"}
                     </button>
-                    {!group.members.some(
-                      (member) => member.memberId === user?.uid
-                    ) && (
-                      <button
-                        onClick={() => handleJoinGroup(group)}
-                        className="bg-yellow-600 text-white font-semibold text-sm px-4 py-2 rounded hover:bg-yellow-700 transition"
-                      >
-                        {group.groupType === "Public"
-                          ? "Join"
-                          : "Request To Join"}
-                      </button>
-                    )}
-                  </div>
-                  {group.id && groupSizeError.includes(group.id) && (
-                    <span className="text-red-500 font-semibold">
-                      Group is already full
-                    </span>
                   )}
                 </div>
-              ))}
+                {group.id && groupSizeError.includes(group.id) && (
+                  <span className="text-red-500 font-semibold">
+                    Group is already full
+                  </span>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
-        {!loading && groups && (
+        {!loading && groups.length > 0 && (
           <div className="flex justify-center mt-6 space-x-4">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
