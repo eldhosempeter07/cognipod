@@ -173,26 +173,29 @@ const Header = () => {
                   >
                     View Profile
                   </a>
-                  <a
+                  {/* <a
                     href="/settings"
                     className="block w-full px-4 py-2  hover:text-yellow-500 text-gray-700 hover:bg-gray-100"
                   >
                     Settings
-                  </a>
+                  </a> */}
                 </div>
               )}
             </div>
-
-            {/* Logout */}
-            <button
-              onClick={() => {
-                auth.signOut();
-                navigate("/home");
-              }}
-              className="text-gray-700 hover:text-yellow-500 transition-colors duration-200"
+            <div
+              className={`text-left relative ${isMobile ? "w-full" : "group"}`}
             >
-              Logout
-            </button>
+              <button
+                onClick={() => {
+                  auth.signOut();
+                  navigate("/home");
+                }}
+                className="text-gray-700  hover:text-yellow-500 transition-colors duration-200"
+              >
+                Logout
+              </button>
+            </div>
+            {/* Logout */}
 
             {/* Notification Icon */}
             {user.uid && (
